@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coherence</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#eceff2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e131b" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coherence">
+<meta name="description" content="A paced breathing timer for coherence practice.">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500&family=Newsreader:opsz,wght@6..72,200;6..72,300;6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eceff2;
+    --surface:#f7f9fa;
+    --text:#1a2330;
+    --muted:#64707f;
+    --hair:rgba(26,35,48,.14);
+    --inhale:#1c7d8a;
+    --exhale:#a96a26;
+    --ring-idle:rgba(26,35,48,.16);
+    --shadow:0 1px 2px rgba(26,35,48,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e131b;
+      --surface:#141b26;
+      --text:#dde4ec;
+      --muted:#7d8a9b;
+      --hair:rgba(221,228,236,.14);
+      --inhale:#79cfd8;
+      --exhale:#e2a768;
+      --ring-idle:rgba(221,228,236,.13);
+      --shadow:none;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e131b;
+    --surface:#141b26;
+    --text:#dde4ec;
+    --muted:#7d8a9b;
+    --hair:rgba(221,228,236,.14);
+    --inhale:#79cfd8;
+    --exhale:#e2a768;
+    --ring-idle:rgba(221,228,236,.13);
+    --shadow:none;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-weight:300;
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    justify-content:center;
+    padding:24px 18px calc(24px + env(safe-area-inset-bottom));
+  }
+  main{
+    width:100%;
+    max-width:420px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:22px;
+  }
+
+  /* ---- stage ---- */
+  .stage{position:relative;width:100%;max-width:340px;aspect-ratio:1;margin-top:8px}
+  svg{width:100%;height:100%;display:block;overflow:visible}
+  .track{fill:none;stroke:var(--ring-idle);stroke-width:.6}
+  .breath{
+    fill:var(--phase);
+    fill-opacity:.10;
+    stroke:var(--phase);
+    stroke-width:1.1;
+    transition:stroke .5s ease, fill .5s ease;
+  }
+  .marker{fill:var(--phase);transition:fill .5s ease}
+  .stage{--phase:var(--muted)}
+  .stage[data-phase="in"]{--phase:var(--inhale)}
+  .stage[data-phase="out"]{--phase:var(--exhale)}
+
+  .center{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:6px;pointer-events:none;
+  }
+  .cue{
+    font-family:"Newsreader",Georgia,serif;
+    font-weight:300;
+    font-size:clamp(26px,8vw,34px);
+    letter-spacing:.01em;
+    color:var(--phase, var(--muted));
+    transition:color .5s ease;
+  }
+  .stage[data-phase="in"] .cue{color:var(--inhale)}
+  .stage[data-phase="out"] .cue{color:var(--exhale)}
+  .clock{
+    font-family:"Newsreader",Georgia,serif;
+    font-weight:200;
+    font-size:clamp(38px,12vw,52px);
+    font-variant-numeric:tabular-nums;
+    line-height:1;
+  }
+  .breaths{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  /* ---- session progress ---- */
+  .progress{width:100%;max-width:340px;height:1px;background:var(--hair);position:relative}
+  .progress span{
+    position:absolute;inset:0 auto 0 0;width:0%;
+    background:var(--text);opacity:.55;
+  }
+
+  /* ---- controls ---- */
+  .controls{width:100%;display:flex;flex-direction:column;gap:18px;align-items:center}
+  .field{width:100%;display:flex;flex-direction:column;gap:9px}
+  .field > p{margin:0;font-size:12.5px;color:var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{
+    font:inherit;font-size:13px;
+    padding:7px 13px;border-radius:999px;
+    border:1px solid var(--hair);
+    background:transparent;color:var(--muted);
+    cursor:pointer;transition:color .15s, border-color .15s;
+  }
+  .chip:hover{color:var(--text);border-color:var(--text)}
+  .chip[aria-pressed="true"]{color:var(--text);border-color:currentColor;box-shadow:inset 0 0 0 1px currentColor}
+  .go{
+    width:100%;font:inherit;font-size:15px;letter-spacing:.02em;
+    padding:15px 20px;border-radius:999px;
+    border:1px solid var(--text);background:transparent;color:var(--text);
+    cursor:pointer;transition:background .2s, color .2s;
+  }
+  .go:hover{background:var(--text);color:var(--bg)}
+  .quiet{
+    font:inherit;font-size:13px;color:var(--muted);
+    background:none;border:none;cursor:pointer;padding:8px;
+  }
+  .quiet:hover{color:var(--text)}
+  .vol{display:flex;align-items:center;gap:10px;width:100%}
+  .vol label{font-size:12.5px;color:var(--muted);white-space:nowrap}
+  input[type=range]{flex:1;accent-color:var(--text);height:18px}
+  :focus-visible{outline:2px solid var(--inhale);outline-offset:3px;border-radius:4px}
+  .hidden{display:none !important}
+  footer{font-size:12px;color:var(--muted);text-align:center;line-height:1.55;max-width:34ch}
+</style>
+</head>
+<body>
+<main>
+  <div class="stage" id="stage">
+    <svg viewBox="0 0 200 200" aria-hidden="true">
+      <circle class="track" cx="100" cy="100" r="90"></circle>
+      <circle class="breath" id="breath" cx="100" cy="100" r="30"></circle>
+      <circle class="marker" id="marker" cx="100" cy="10" r="3.2"></circle>
+    </svg>
+    <div class="center">
+      <div class="cue" id="cue">Ready</div>
+      <div class="clock" id="clock">10:00</div>
+      <div class="breaths" id="breaths">55 breaths</div>
+    </div>
+  </div>
+
+  <div class="progress"><span id="bar"></span></div>
+
+  <div class="controls">
+    <div id="setup" class="controls">
+      <div class="field">
+        <p>Session length</p>
+        <div class="chips" id="durations"></div>
+      </div>
+      <div class="field">
+        <p>Pace, breaths per minute</p>
+        <div class="chips" id="rates"></div>
+      </div>
+      <div class="vol">
+        <label for="vol">Volume</label>
+        <input id="vol" type="range" min="0" max="100" value="60">
+      </div>
+    </div>
+    <button class="go" id="go">Begin</button>
+    <button class="quiet hidden" id="again">Start another session</button>
+  </div>
+
+  <footer id="note">Inhale on the rising tone, exhale on the low one. Breathe through your nose, into your belly, without straining.</footer>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const stage=$('stage'), breath=$('breath'), marker=$('marker'), cue=$('cue'),
+        clock=$('clock'), breaths=$('breaths'), bar=$('bar'), go=$('go'),
+        again=$('again'), setup=$('setup'), note=$('note'), volEl=$('vol');
+
+  const DURATIONS=[3,5,10,15,20,30];
+  const RATES=[4.5,5,5.5,6];
+  let minutes=10, rate=5.5, volume=.6;
+
+  // ---------- controls ----------
+  function chips(host, values, label, get, set){
+    host.innerHTML='';
+    values.forEach(v=>{
+      const b=document.createElement('button');
+      b.className='chip'; b.type='button'; b.textContent=label(v);
+      b.setAttribute('aria-pressed', get()===v);
+      b.onclick=()=>{ set(v); chips(host,values,label,get,set); idleDisplay(); };
+      host.appendChild(b);
+    });
+  }
+  chips($('durations'), DURATIONS, v=>v+' min', ()=>minutes, v=>minutes=v);
+  chips($('rates'), RATES, v=>v.toFixed(1), ()=>rate, v=>rate=v);
+  volEl.oninput=()=>{ volume=volEl.value/100; if(master) master.gain.value=volume; };
+
+  // ---------- audio ----------
+  let ctx=null, master=null;
+  function audio(){
+    if(!ctx){
+      ctx=new (window.AudioContext||window.webkitAudioContext)();
+      master=ctx.createGain(); master.gain.value=volume; master.connect(ctx.destination);
+    }
+    if(ctx.state==='suspended') ctx.resume();
+    return ctx;
+  }
+  function tone(at,{f,dur,glide,gain}){
+    const g=ctx.createGain(), lp=ctx.createBiquadFilter();
+    lp.type='lowpass'; lp.frequency.value=f*3.2; lp.Q.value=.4;
+    g.connect(lp); lp.connect(master);
+    g.gain.setValueAtTime(.0001,at);
+    g.gain.exponentialRampToValueAtTime(gain,at+.07);
+    g.gain.exponentialRampToValueAtTime(.0001,at+dur);
+    [[f,1],[f*1.5,.22],[f*2,.12]].forEach(([freq,amp])=>{
+      const o=ctx.createOscillator(), og=ctx.createGain();
+      o.type='sine'; og.gain.value=amp;
+      o.frequency.setValueAtTime(freq,at);
+      o.frequency.exponentialRampToValueAtTime(freq*glide,at+dur*.85);
+      o.connect(og); og.connect(g); o.start(at); o.stop(at+dur+.1);
+    });
+  }
+  const inhaleTone = at => tone(at,{f:587.33,dur:.85,glide:1.06,gain:.30});   // bright, rising
+  const exhaleTone = at => tone(at,{f:261.63,dur:1.35,glide:.94,gain:.24});   // low, falling
+  function finishChime(at){ [392,329.63,261.63].forEach((f,i)=>tone(at+i*.55,{f,dur:1.6,glide:1,gain:.18})); }
+
+  // ---------- session ----------
+  let running=false, t0=0, tEnd=0, cycle=0, cycles=0, next=0, timer=null, raf=null, lock=null;
+  const LEADIN=10;
+
+  function begin(){
+    audio();
+    cycle=60/rate;
+    cycles=Math.max(1, Math.round((minutes*60)/cycle));
+    t0=ctx.currentTime+LEADIN;
+    tEnd=t0+cycles*cycle;
+    next=0; running=true;
+    setup.classList.add('hidden'); again.classList.add('hidden');
+    go.textContent='End session';
+    note.textContent='Follow the ring. Let the exhale be unforced.';
+    schedule();
+    timer=setInterval(schedule,1000);
+    document.addEventListener('visibilitychange',onVis);
+    wake();
+    loop();
+  }
+
+  function schedule(){
+    if(!running) return;
+    const horizon=ctx.currentTime+12;
+    while(next<cycles*2){
+      const at=t0+next*(cycle/2);
+      if(at>horizon) break;
+      (next%2===0?inhaleTone:exhaleTone)(at);
+      next++;
+    }
+  }
+
+  function stop(completed){
+    running=false;
+    clearInterval(timer); cancelAnimationFrame(raf);
+    document.removeEventListener('visibilitychange',onVis);
+    if(lock){ lock.release().catch(()=>{}); lock=null; }
+    if(ctx) ctx.close().then(()=>{ctx=null;master=null;}).catch(()=>{ctx=null;master=null;});
+    stage.removeAttribute('data-phase');
+    breath.setAttribute('r',30);
+    marker.setAttribute('cx',100); marker.setAttribute('cy',10);
+    go.textContent='Begin';
+    if(completed){
+      cue.textContent='Done'; clock.textContent='0:00'; bar.style.width='100%';
+      breaths.textContent=cycles+' breaths';
+      note.textContent='Sit for a moment before you get up.';
+      go.classList.add('hidden'); again.classList.remove('hidden');
+    }else{
+      setup.classList.remove('hidden');
+      note.textContent='Inhale on the rising tone, exhale on the low one. Breathe through your nose, into your belly, without straining.';
+      idleDisplay();
+    }
+  }
+
+  function loop(){
+    raf=requestAnimationFrame(loop);
+    if(!running || !ctx) return;
+    const now=ctx.currentTime;
+
+    if(now<t0){
+      const left=Math.ceil(t0-now);
+      cue.textContent='Settle';
+      clock.textContent=left>0?String(left):'1';
+      breaths.textContent='starting on the first tone';
+      bar.style.width='0%';
+      return;
+    }
+    if(now>=tEnd){
+      finishChime(now+.15);
+      const c=cycles; running=false;
+      setTimeout(()=>{ cycles=c; stop(true); }, 2600);
+      cancelAnimationFrame(raf);
+      clearInterval(timer);
+      return;
+    }
+
+    const el=now-t0;
+    const p=(el%cycle)/cycle;                 // 0 = start of inhale
+    const s=(1-Math.cos(2*Math.PI*p))/2;      // 0 empty → 1 full
+    breath.setAttribute('r',(28+58*s).toFixed(2));
+    const a=(p*2*Math.PI)-Math.PI/2;
+    marker.setAttribute('cx',(100+90*Math.cos(a)).toFixed(2));
+    marker.setAttribute('cy',(100+90*Math.sin(a)).toFixed(2));
+    stage.dataset.phase = p<.5?'in':'out';
+    cue.textContent = p<.5?'Inhale':'Exhale';
+
+    const left=Math.max(0,tEnd-now);
+    clock.textContent=fmt(left);
+    breaths.textContent=(Math.floor(el/cycle)+1)+' of '+cycles+' breaths';
+    bar.style.width=(100*el/(cycles*cycle)).toFixed(2)+'%';
+  }
+
+  function fmt(sec){
+    sec=Math.ceil(sec);
+    return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+  }
+
+  async function wake(){
+    try{ if('wakeLock' in navigator) lock=await navigator.wakeLock.request('screen'); }catch(e){}
+  }
+  function onVis(){
+    if(document.visibilityState==='visible'){ if(!lock) wake(); schedule(); }
+  }
+
+  function idleDisplay(){
+    const c=Math.max(1,Math.round((minutes*60)/(60/rate)));
+    clock.textContent=fmt(c*(60/rate));
+    breaths.textContent=c+' breaths at '+rate.toFixed(1)+' per minute';
+    cue.textContent='Ready';
+    bar.style.width='0%';
+  }
+
+  go.onclick=()=>{ running?stop(false):begin(); };
+  again.onclick=()=>{ again.classList.add('hidden'); go.classList.remove('hidden'); stop(false); };
+  document.addEventListener('keydown',e=>{
+    if(e.code==='Space'){ e.preventDefault(); go.classList.contains('hidden')?again.click():go.click(); }
+  });
+
+  idleDisplay();
+})();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
