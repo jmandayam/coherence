@@ -87,6 +87,17 @@
   input[type=range]{flex:1;accent-color:var(--text);height:18px}
   input[type=checkbox]{accent-color:var(--text);width:15px;height:15px}
   .est{font-size:12.5px;color:var(--muted);text-align:center;margin:0}
+  .txt{font:inherit;font-size:13px;width:100%;padding:8px 13px;border-radius:999px;border:1px solid var(--hair);
+       background:transparent;color:var(--text)}
+  .txt.on{border-color:currentColor;box-shadow:inset 0 0 0 1px currentColor}
+  .txt[aria-invalid="true"]{border-color:var(--warn);box-shadow:inset 0 0 0 1px var(--warn)}
+  .field > p.bad{color:var(--warn)}
+  .hint{width:100%;display:flex;flex-direction:column;gap:9px}
+  .hint p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.6}
+  .hint button{font:inherit;font-size:12.5px;align-self:flex-start;padding:6px 13px;
+               border-radius:999px;border:1px solid var(--hair);background:transparent;
+               color:var(--muted);cursor:pointer;transition:color .15s,border-color .15s}
+  .hint button:hover{color:var(--text);border-color:var(--text)}
   .panel{width:100%;display:flex;flex-direction:column;gap:10px}
   .panel p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.6}
   pre{margin:0;padding:12px;background:var(--surface);border:1px solid var(--hair);border-radius:10px;
@@ -137,11 +148,17 @@
     </div>
 
     <div class="controls hidden" id="setupAssess">
-      <div class="field"><p>Rates to test</p><div class="chips" id="grid"></div></div>
+      <div class="field"><p>Rates to test</p><div class="chips" id="grid"></div>
+        <input class="txt" id="custom" type="text" autocomplete="off" spellcheck="false"
+               placeholder="or your own, seconds in/out: 5.0, 5.5, 6.0"
+               aria-label="Custom rates, seconds in/out" aria-describedby="customNote">
+        <p id="customNote" aria-live="polite"></p></div>
       <div class="field"><p>Minutes at each rate</p><div class="chips" id="steplen"></div></div>
       <div class="field"><p>Rest between rates</p><div class="chips" id="restlen"></div></div>
       <div class="field"><p>Baseline before starting</p><div class="chips" id="baselen"></div></div>
       <div class="field"><p>Order</p><div class="chips" id="order"></div></div>
+      <div class="field"><p>Passes through the rates</p><div class="chips" id="repeats"></div></div>
+      <div class="field"><p>Order of passes</p><div class="chips" id="passorder"></div></div>
       <p class="est" id="est"></p>
     </div>
 
@@ -151,6 +168,11 @@
 
     <div class="row"><label for="vol">Volume</label><input id="vol" type="range" min="0" max="100" value="60"></div>
     <div class="row"><input id="speak" type="checkbox" checked><label for="speak">Spoken cues between steps</label></div>
+
+    <div class="hint hidden" id="silent">
+      <p id="silentNote"></p>
+      <button type="button" id="test">Play a test tone</button>
+    </div>
 
     <button class="go" id="go">Begin</button>
     <button class="quiet hidden" id="again">Start again</button>
@@ -187,14 +209,39 @@
 
   let mode='session', minutes=10, rate=5.5;
   let grid='fine', stepMin=2, restSec=90, baseMin=2, order='desc';
+  let customSec=null, repeats=2, passOrder='palindrome';
   let volume=.6, speech=true;
+
+  // Custom rates are typed in seconds in/out (one inhale, or one exhale). Everything
+  // internal stays in breaths per minute: bpm = 60 / (2 × seconds).
+  const secOf=r=>60/(2*r), bpmOf=s=>60/(2*s);
+  const fmtSec=s=>{const t=String(+s.toFixed(2));return t.includes('.')?t:t+'.0';};
+  const rateLabel=r=>fmtSec(secOf(r))+' s · '+r.toFixed(2)+' bpm';
+  function parseRates(text){
+    const parts=text.split(',').map(x=>x.trim()).filter(Boolean);
+    if(parts.length<2||parts.length>8)return {err:'Enter 2 to 8 values, separated by commas.'};
+    const vals=[];
+    for(const x of parts){
+      if(!/^(\d+\.?\d*|\.\d+)$/.test(x))return {err:'“'+x+'” is not a number.'};
+      const v=Number(x);
+      if(v<3||v>10)return {err:x+' is outside 3 to 10 seconds.'};
+      if(vals.includes(v))return {err:x+' is listed twice.'};
+      vals.push(v);
+    }
+    return {vals};
+  }
 
   try{ const s=JSON.parse(localStorage.getItem(SETTINGS)||'{}');
     ({minutes=minutes,rate=rate,grid=grid,stepMin=stepMin,restSec=restSec,
-      baseMin=baseMin,order=order,volume=volume,speech=speech}=s);
+      baseMin=baseMin,order=order,customSec=customSec,repeats=repeats,passOrder=passOrder,
+      volume=volume,speech=speech}=s);
   }catch(e){}
+  customSec=(Array.isArray(customSec)&&parseRates(customSec.join(',')).vals)||null;
+  if(grid==='custom'&&!customSec)grid='fine';
+  if(![1,2,3].includes(repeats))repeats=2;
+  if(!['palindrome','same'].includes(passOrder))passOrder='palindrome';
   const save=()=>{try{localStorage.setItem(SETTINGS,JSON.stringify(
-    {minutes,rate,grid,stepMin,restSec,baseMin,order,volume,speech}));}catch(e){}};
+    {minutes,rate,grid,stepMin,restSec,baseMin,order,customSec,repeats,passOrder,volume,speech}));}catch(e){}};
 
   function chips(host,values,label,get,set){
     host.innerHTML='';
@@ -208,11 +255,36 @@
   }
   chips($('durations'),DURATIONS,v=>v+' min',()=>minutes,v=>minutes=v);
   chips($('rates'),RATES,v=>v.toFixed(1),()=>rate,v=>rate=v);
-  chips($('grid'),['coarse','fine'],v=>v==='coarse'?'6.5 to 4.5':'6.0 to 4.5, fine',()=>grid,v=>grid=v);
+  const gridChips=()=>chips($('grid'),['coarse','fine'],v=>v==='coarse'?'6.5 to 4.5':'6.0 to 4.5, fine',()=>grid,v=>grid=v);
+  gridChips();
   chips($('steplen'),[2,3,4],v=>v+' min',()=>stepMin,v=>stepMin=v);
   chips($('restlen'),[60,90,120],v=>v===60?'1 min':(v/60)+' min',()=>restSec,v=>restSec=v);
   chips($('baselen'),[0,2,3],v=>v?v+' min':'none',()=>baseMin,v=>baseMin=v);
   chips($('order'),['desc','asc'],v=>v==='desc'?'fast to slow':'slow to fast',()=>order,v=>order=v);
+  chips($('repeats'),[1,2,3],String,()=>repeats,v=>repeats=v);
+  chips($('passorder'),['palindrome','same'],v=>v==='same'?'same order each pass':'palindrome',
+        ()=>passOrder,v=>passOrder=v);
+
+  // The custom list becomes the rate source once it parses. Bad input leaves the last good
+  // list (or the preset) in effect and says so, rather than guessing what was meant.
+  const customEl=$('custom'),customNote=$('customNote');
+  const secList=secs=>secs.map(fmtSec).join(', ');
+  function customShow(){
+    const r=parseRates(customEl.value),bad=!!r.err&&!(!customEl.value.trim()&&grid!=='custom');
+    customEl.classList.toggle('on',grid==='custom');
+    customEl.setAttribute('aria-invalid',String(bad));
+    customNote.classList.toggle('bad',bad);
+    customNote.textContent = bad
+      ? r.err+' Still using '+(grid==='custom'?secList(customSec)+' s':'the preset above')+'.'
+      : (r.vals?r.vals.map(s=>fmtSec(s)+' s · '+bpmOf(s).toFixed(2)+' bpm').join(',  '):'');
+  }
+  customEl.value=customSec?secList(customSec):'';
+  customEl.oninput=()=>{
+    const r=parseRates(customEl.value);
+    if(r.vals){customSec=r.vals;grid='custom';save();gridChips();}
+    idle();
+  };
+  customEl.onfocus=()=>{if(grid!=='custom'&&parseRates(customEl.value).vals)customEl.oninput();};
 
   volEl.value=Math.round(volume*100);
   volEl.oninput=()=>{volume=volEl.value/100;if(master)master.gain.value=volume;save();};
@@ -258,10 +330,60 @@
   const prepTone  =at=>tone(at,{f:392.00,dur:.45,glide:1,gain:.13});
   const restTone  =at=>tone(at,{f:196.00,dur:1.6,glide:1,gain:.14});
   const finishChime=at=>[392,329.63,261.63].forEach((f,i)=>tone(at+i*.55,{f,dur:1.6,glide:1,gain:.18}));
+  // The platform hands out whatever voice is first in its list, which on a Mac can be a
+  // novelty face and on Linux a flat formant synth. Ask for the known-natural ones by name
+  // instead, best first, and fall through to the platform default rather than risk picking
+  // something worse. getVoices() is empty until the list loads, so re-pick when it lands.
+  const VOICES=['Ava','Allison','Samantha','Zoe','Serena','Susan','Karen','Moira','Tessa',
+                'Google US English','Google UK English Female',
+                'Microsoft Aria','Microsoft Jenny','Microsoft Zira'];
+  let voice=null;
+  function pickVoice(){
+    let all=[]; try{ all=speechSynthesis.getVoices()||[]; }catch(e){}
+    if(!all.length) return;
+    const en=all.filter(v=>/^en\b|^en-/i.test(v.lang||''));
+    const pool=en.length?en:all;
+    for(const want of VOICES){
+      const hit=pool.find(v=>v.name===want)||pool.find(v=>(v.name||'').startsWith(want));
+      if(hit){ voice=hit; return; }
+    }
+    voice=null;
+  }
+  if('speechSynthesis' in window){
+    pickVoice();
+    try{ speechSynthesis.onvoiceschanged=pickVoice; }catch(e){}
+  }
+
+  // Rates are announced in seconds in/out, said the way a person would: "five and a half",
+  // not "five point five", which is the giveaway that a machine is talking.
+  const spokenSec=r=>{const [i,d]=String(+secOf(r).toFixed(2)).split('.');
+    return !d?i:d==='5'?i+' and a half':i+' point '+[...d].join(' ');};
+
   function say(text){
     if(!speech||!('speechSynthesis' in window))return;
-    try{const u=new SpeechSynthesisUtterance(text);u.rate=.92;u.volume=Math.min(1,volume+.15);
+    try{const u=new SpeechSynthesisUtterance(text);
+      if(voice){u.voice=voice;u.lang=voice.lang;}
+      u.rate=.86;u.pitch=.95;u.volume=Math.min(1,volume+.15);
       speechSynthesis.speak(u);}catch(e){}
+  }
+
+  // ---------- the silent switch ----------
+  // iPhones route both web audio and spoken cues through the ringer, so with silent mode on
+  // nothing is heard and nothing on screen says why. iOS 16.4 and up let a page opt out of
+  // that; where it can't, name the problem and offer a tone to check against. On anything
+  // else the block is dropped outright, so the show/hide selectors below never see it.
+  const silentEl=$('silent'),silentNote=$('silentNote');
+  const iOS = /iP(hone|ad|od)/.test(navigator.userAgent)
+           || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  let silentProof=false;
+  try{ if(navigator.audioSession){ navigator.audioSession.type='playback'; silentProof=true; } }catch(e){}
+  if(iOS && !silentProof){
+    silentNote.textContent='Silent mode mutes the tones and the spoken cues. If you hear nothing, '
+      +'turn the ring switch back on — the volume here has no effect on it.';
+    silentEl.classList.remove('hidden');
+    $('test').onclick=()=>{ audio(); inhaleTone(ctx.currentTime+.05); };
+  }else{
+    silentEl.remove();
   }
 
   let dev=null,beats=[],beatClock=null,liveHR=0,bad=0,seen=0;
@@ -324,13 +446,27 @@
       return segs;
     }
     if(baseMin)push('free','Breathe normally',baseMin*60,{baseline:true});
-    const list=order==='desc'?GRIDS[grid]:[...GRIDS[grid]].reverse();
-    list.forEach((r,i)=>{
+    const list=blockList();
+    list.forEach(({rate:r,pass},i)=>{
       const cyc=60/r,n=Math.max(1,Math.round(stepMin*60/cyc));
-      push('breathe',r.toFixed(2)+' bpm',n*cyc,{rate:r,cycles:n,cycle:cyc,step:i+1,steps:list.length});
+      push('breathe',r.toFixed(2)+' bpm',n*cyc,{rate:r,cycles:n,cycle:cyc,step:i+1,steps:list.length,pass});
       if(i<list.length-1)push('free','Rest',restSec);
     });
     return segs;
+  }
+  // One pass through the rates, fastest first for 'desc'. A custom list is sorted the same
+  // way as the presets so the order chips mean what they say.
+  function rateList(){
+    const b=grid==='custom'?customSec.map(bpmOf).sort((x,y)=>y-x):GRIDS[grid];
+    return order==='desc'?b:[...b].reverse();
+  }
+  // Palindrome reverses every other pass (a b c, c b a, a b c), so each rate's blocks sit
+  // symmetrically about the session midpoint and linear drift cancels between them.
+  function blockList(){
+    const L=rateList(),out=[];
+    for(let p=1;p<=repeats;p++)
+      (passOrder==='same'||p%2?L:[...L].reverse()).forEach(rate=>out.push({rate,pass:p}));
+    return out;
   }
   function planEvents(segs){
     const ev=[];
@@ -349,7 +485,7 @@
     const c=[];
     segs.forEach(s=>{
       if(s.kind==='breathe'&&mode==='assess')
-        c.push({t:Math.max(0,s.start-ANNOUNCE),say:`Next, ${String(s.rate).replace('.',' point ')} breaths per minute`});
+        c.push({t:Math.max(0,s.start-ANNOUNCE),say:`Next, ${spokenSec(s.rate)} seconds.`});
       if(s.kind==='free'&&!s.baseline)c.push({t:s.start+1.2,say:'Rest. Breathe normally.'});
       if(s.kind==='free'&&s.baseline)c.push({t:s.start+.5,say:'Baseline. Breathe normally.'});
     });
@@ -365,7 +501,7 @@
     events=planEvents(plan);cues=planCues(plan);
     evIdx=0;cueIdx=0;beats=[];beatClock=null;bad=0;seen=0;
     t0=ctx.currentTime;wall0=Date.now();running=true;
-    controls.querySelectorAll('.field,.row').forEach(e=>e.classList.add('hidden'));
+    controls.querySelectorAll('.field,.row,.hint').forEach(e=>e.classList.add('hidden'));
     ['setupSession','setupAssess','setupCheck'].forEach(i=>$(i).classList.add('hidden'));
     $('modes').classList.add('hidden');panel.classList.add('hidden');results.classList.add('hidden');
     again.classList.add('hidden');go.classList.remove('hidden');go.textContent='End';
@@ -403,7 +539,7 @@
       cue.textContent=p<.5?'Inhale':'Exhale';
       clock.textContent=fmt(left);
       breaths.textContent = mode==='assess'
-        ? s.rate+' bpm · step '+s.step+' of '+s.steps
+        ? rateLabel(s.rate)+' · block '+s.step+' of '+s.steps
         : (Math.floor(inSeg/s.cycle)+1)+' of '+s.cycles+' breaths';
     }else{
       breath.setAttribute('r',(28+58*.28).toFixed(2));
@@ -414,12 +550,12 @@
     }
     if(mode==='assess')drawTrack(s,el);
   }
+  // By position in the block sequence, not by rate: a rate comes round once per pass.
   function drawTrack(cur,el){
-    const list=order==='desc'?GRIDS[grid]:[...GRIDS[grid]].reverse();
-    steptrack.innerHTML=list.map(r=>{
-      if(cur.kind==='breathe'&&cur.rate===r)return '<b>'+r+'</b>';
-      const done=plan.some(s=>s.kind==='breathe'&&s.rate===r&&s.end<=el);
-      return done?'<s>'+r+'</s>':'<span>'+r+'</span>';
+    steptrack.innerHTML=plan.filter(s=>s.kind==='breathe').map(s=>{
+      const r=fmtSec(secOf(s.rate))+'s';
+      if(s===cur)return '<b>'+r+'</b>';
+      return s.end<=el?'<s>'+r+'</s>':'<span>'+r+'</span>';
     }).join('');
   }
 
@@ -449,7 +585,7 @@
     reset();
   }
   function reset(){
-    controls.querySelectorAll('.field,.row').forEach(e=>e.classList.remove('hidden'));
+    controls.querySelectorAll('.field,.row,.hint').forEach(e=>e.classList.remove('hidden'));
     $('modes').classList.remove('hidden');
     panel.classList.add('hidden');results.classList.add('hidden');
     again.classList.add('hidden');go.classList.remove('hidden');
@@ -484,12 +620,31 @@
       const a=s.start+Math.min(60,s.dur*0.35);
       const pts=beats.filter(([t])=>t-t0>=a&&t-t0<s.end).map(([t,rr])=>[t-t0-a,60000/rr]);
       const amp=fit(pts,s.rate/60);
-      rows.push([s.rate,pts.length,amp]);
+      rows.push([s.rate,pts.length,amp,s.pass]);
     });
+    if(mode==='assess')return showBlocks(rows);
     const best=rows.filter(r=>r[2]).sort((x,y)=>y[2]-x[2])[0];
     $('restable').innerHTML='<tr><th>rate</th><th>beats</th><th>swing, bpm</th></tr>'+
       rows.map(([r,n,a])=>'<tr><td>'+(best&&best[0]===r?'<b>'+r+'</b>':r)+'</td><td>'+n+'</td><td>'+
         (a?a.toFixed(1):'—')+'</td></tr>').join('');
+    results.classList.remove('hidden');
+  }
+  // One row per block, then the mean across passes for each rate. Both are kept: the spread
+  // between passes at one rate is what says whether two rates really differ.
+  function showBlocks(rows){
+    const cell=a=>a!=null?a.toFixed(1):'—';
+    const means=[...new Set(rows.map(r=>r[0]))].map(r=>{
+      const g=rows.filter(x=>x[0]===r),ok=g.filter(x=>x[2]!=null);
+      return [r,ok.length+' of '+g.length,g.reduce((t,x)=>t+x[1],0),
+              ok.length?ok.reduce((t,x)=>t+x[2],0)/ok.length:null];
+    });
+    const best=means.filter(m=>m[3]!=null).sort((x,y)=>y[3]-x[3])[0];
+    $('restable').innerHTML='<tr><th>block · rate</th><th>pass</th><th>beats</th><th>swing, bpm</th></tr>'+
+      rows.map(([r,n,a,p],i)=>'<tr><td>'+(i+1)+' · '+rateLabel(r)+'</td><td>'+p+'</td><td>'+n+'</td><td>'+
+        cell(a)+'</td></tr>').join('')+
+      '<tr><th>mean by rate</th><th>blocks</th><th>beats</th><th>swing, bpm</th></tr>'+
+      means.map(([r,k,n,a])=>'<tr><td>'+(best&&best[0]===r?'<b>'+rateLabel(r)+'</b>':rateLabel(r))+'</td><td>'+k+
+        '</td><td>'+n+'</td><td>'+cell(a)+'</td></tr>').join('');
     results.classList.remove('hidden');
   }
 
@@ -502,11 +657,13 @@
       '# started '+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+
         p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())+sg+p(Math.floor(ab/60))+':'+p(ab%60),
       '# mode '+mode+(mode==='assess'?'  order '+order+'  step '+stepMin+'min  rest '+(restSec/60)+'min':''),
+      ...(mode==='assess'?['# rates '+grid+'  '+rateList().map(r=>fmtSec(secOf(r))).join(',')+' s in/out = '+
+        rateList().map(r=>r.toFixed(2)).join(',')+' bpm  repeats '+repeats+'  ordering '+passOrder]:[]),
       '# beats '+beats.length+'  flagged '+(100*bad/Math.max(1,seen)).toFixed(1)+'%',
-      '# segments: label,start_s,clock',''];
+      '# segments: label,start_s,clock'+(mode==='assess'?',pass  (label is bpm; pass blank for baseline and rest)':''),''];
     plan.forEach(s=>{ if(s.kind!=='lead')
       L.push('seg,'+(s.kind==='breathe'?s.rate:(s.baseline?'baseline':'rest'))+','+
-             s.start.toFixed(1)+','+stamp(s.start)); });
+             s.start.toFixed(1)+','+stamp(s.start)+(mode==='assess'?','+(s.pass||''):'')); });
     L.push('','# rr intervals: t_s,rr_ms');
     beats.forEach(([t,rr])=>L.push((t-t0).toFixed(2)+','+rr));
     return L.join('\n');
@@ -532,7 +689,8 @@
     const p=makePlan(),t=p[p.length-1].end;
     clock.textContent=fmt(t);cue.textContent='Ready';bar.style.width='0%';
     if(mode==='assess'){
-      breaths.textContent=GRIDS[grid].length+' rates, hands free';
+      customShow();
+      breaths.textContent=rateList().length+' rates'+(repeats>1?' × '+repeats+' passes':'')+', hands free';
       $('est').textContent='About '+Math.round(t/60)+' minutes end to end.';
     }else if(mode==='check'){
       breaths.textContent='2 minutes at 5.5';
