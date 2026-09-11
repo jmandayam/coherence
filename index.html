@@ -21,94 +21,81 @@
   :root{
     --bg:#eceff2; --surface:#f7f9fa; --text:#1a2330; --muted:#64707f;
     --hair:rgba(26,35,48,.14); --inhale:#1c7d8a; --exhale:#a96a26;
-    --ring-idle:rgba(26,35,48,.16);
+    --ring-idle:rgba(26,35,48,.16); --ok:#1c7d8a; --warn:#a96a26;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
       --bg:#0e131b; --surface:#141b26; --text:#dde4ec; --muted:#7d8a9b;
       --hair:rgba(221,228,236,.14); --inhale:#79cfd8; --exhale:#e2a768;
-      --ring-idle:rgba(221,228,236,.13);
+      --ring-idle:rgba(221,228,236,.13); --ok:#79cfd8; --warn:#e2a768;
     }
   }
   :root[data-theme="dark"]{
     --bg:#0e131b; --surface:#141b26; --text:#dde4ec; --muted:#7d8a9b;
     --hair:rgba(221,228,236,.14); --inhale:#79cfd8; --exhale:#e2a768;
-    --ring-idle:rgba(221,228,236,.13);
+    --ring-idle:rgba(221,228,236,.13); --ok:#79cfd8; --warn:#e2a768;
   }
-
   *{box-sizing:border-box}
   html,body{height:100%}
-  body{
-    margin:0; background:var(--bg); color:var(--text);
-    font-family:"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
-    font-weight:300; -webkit-font-smoothing:antialiased;
-    display:flex; justify-content:center;
-    padding:20px 18px calc(28px + env(safe-area-inset-bottom));
-  }
-  main{width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center;gap:20px}
-
-  .modes{display:flex;gap:7px;align-self:center}
-
-  .stage{position:relative;width:100%;max-width:330px;aspect-ratio:1;--phase:var(--muted)}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,sans-serif;
+    font-weight:300;-webkit-font-smoothing:antialiased;display:flex;justify-content:center;
+    padding:18px 18px calc(28px + env(safe-area-inset-bottom))}
+  main{width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center;gap:18px}
+  .modes{display:flex;gap:7px}
+  .strap{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted);
+         width:100%;justify-content:center;min-height:20px;text-align:center}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--hair);flex:none}
+  .dot.on{background:var(--ok)} .dot.bad{background:var(--warn)}
+  .stage{position:relative;width:100%;max-width:320px;aspect-ratio:1;--phase:var(--muted)}
   .stage[data-phase="in"]{--phase:var(--inhale)}
   .stage[data-phase="out"]{--phase:var(--exhale)}
   svg{width:100%;height:100%;display:block;overflow:visible}
   .track{fill:none;stroke:var(--ring-idle);stroke-width:.6}
   .breath{fill:var(--phase);fill-opacity:.10;stroke:var(--phase);stroke-width:1.1;
-          transition:stroke .5s ease, fill .5s ease}
-  .marker{fill:var(--phase);transition:fill .5s ease, opacity .4s ease}
+          transition:stroke .5s ease,fill .5s ease}
+  .marker{fill:var(--phase);transition:fill .5s ease,opacity .4s ease}
   .marker.off{opacity:0}
-
-  .center{position:absolute;inset:0;display:flex;flex-direction:column;
-          align-items:center;justify-content:center;gap:5px;pointer-events:none;padding:0 14%}
-  .cue{font-family:"Newsreader",Georgia,serif;font-weight:300;
-       font-size:clamp(23px,7vw,31px);color:var(--phase);transition:color .5s ease;text-align:center}
-  .clock{font-family:"Newsreader",Georgia,serif;font-weight:200;
-         font-size:clamp(36px,11.5vw,50px);font-variant-numeric:tabular-nums;line-height:1.05}
+  .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+          justify-content:center;gap:5px;pointer-events:none;padding:0 14%}
+  .cue{font-family:"Newsreader",Georgia,serif;font-weight:300;font-size:clamp(22px,7vw,30px);
+       color:var(--phase);transition:color .5s ease;text-align:center}
+  .clock{font-family:"Newsreader",Georgia,serif;font-weight:200;font-size:clamp(34px,11vw,48px);
+         font-variant-numeric:tabular-nums;line-height:1.05}
   .breaths{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:center}
-
-  .progress{width:100%;max-width:330px;height:1px;background:var(--hair);position:relative}
+  .progress{width:100%;max-width:320px;height:1px;background:var(--hair);position:relative}
   .progress span{position:absolute;inset:0 auto 0 0;width:0%;background:var(--text);opacity:.55}
-
-  .steptrack{display:flex;gap:12px;font-size:12px;color:var(--muted);
+  .steptrack{display:flex;gap:11px;font-size:12px;color:var(--muted);
              font-variant-numeric:tabular-nums;flex-wrap:wrap;justify-content:center}
   .steptrack b{font-weight:400;color:var(--text)}
   .steptrack s{text-decoration:none;opacity:.4}
-
-  .controls{width:100%;display:flex;flex-direction:column;gap:17px;align-items:center}
+  .controls{width:100%;display:flex;flex-direction:column;gap:16px;align-items:center}
   .field{width:100%;display:flex;flex-direction:column;gap:8px}
   .field > p{margin:0;font-size:12.5px;color:var(--muted)}
   .chips{display:flex;flex-wrap:wrap;gap:7px}
-  .chip{font:inherit;font-size:13px;padding:7px 13px;border-radius:999px;
-        border:1px solid var(--hair);background:transparent;color:var(--muted);
-        cursor:pointer;transition:color .15s,border-color .15s}
+  .chip{font:inherit;font-size:13px;padding:7px 13px;border-radius:999px;border:1px solid var(--hair);
+        background:transparent;color:var(--muted);cursor:pointer;transition:color .15s,border-color .15s}
   .chip:hover{color:var(--text);border-color:var(--text)}
-  .chip[aria-pressed="true"]{color:var(--text);border-color:currentColor;
-                             box-shadow:inset 0 0 0 1px currentColor}
-  .go{width:100%;font:inherit;font-size:15px;letter-spacing:.02em;padding:15px 20px;
-      border-radius:999px;border:1px solid var(--text);background:transparent;color:var(--text);
-      cursor:pointer;transition:background .2s,color .2s}
+  .chip[aria-pressed="true"]{color:var(--text);border-color:currentColor;box-shadow:inset 0 0 0 1px currentColor}
+  .go{width:100%;font:inherit;font-size:15px;letter-spacing:.02em;padding:15px 20px;border-radius:999px;
+      border:1px solid var(--text);background:transparent;color:var(--text);cursor:pointer;
+      transition:background .2s,color .2s}
   .go:hover{background:var(--text);color:var(--bg)}
-  .quiet{font:inherit;font-size:13px;color:var(--muted);background:none;border:none;
-         cursor:pointer;padding:8px}
+  .quiet{font:inherit;font-size:13px;color:var(--muted);background:none;border:none;cursor:pointer;padding:8px}
   .quiet:hover{color:var(--text)}
   .row{display:flex;align-items:center;gap:10px;width:100%;font-size:12.5px;color:var(--muted)}
-  .row label{white-space:nowrap}
   input[type=range]{flex:1;accent-color:var(--text);height:18px}
   input[type=checkbox]{accent-color:var(--text);width:15px;height:15px}
-  .est{font-size:12.5px;color:var(--muted);text-align:center}
-  .hint{width:100%;display:flex;flex-direction:column;gap:9px}
-  .hint p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.6}
-  .hint button{font:inherit;font-size:12.5px;align-self:flex-start;padding:6px 13px;
-               border-radius:999px;border:1px solid var(--hair);background:transparent;
-               color:var(--muted);cursor:pointer;transition:color .15s,border-color .15s}
-  .hint button:hover{color:var(--text);border-color:var(--text)}
-
+  .est{font-size:12.5px;color:var(--muted);text-align:center;margin:0}
   .panel{width:100%;display:flex;flex-direction:column;gap:10px}
   .panel p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.6}
-  pre{margin:0;padding:13px;background:var(--surface);border:1px solid var(--hair);
-      border-radius:10px;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11px;
-      line-height:1.65;overflow-x:auto;white-space:pre;color:var(--text)}
+  pre{margin:0;padding:12px;background:var(--surface);border:1px solid var(--hair);border-radius:10px;
+      font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11px;line-height:1.6;
+      overflow:auto;max-height:260px;white-space:pre;color:var(--text)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+  th,td{text-align:right;padding:5px 4px;border-bottom:1px solid var(--hair)}
+  th:first-child,td:first-child{text-align:left}
+  th{font-weight:400;color:var(--muted)}
   :focus-visible{outline:2px solid var(--inhale);outline-offset:3px;border-radius:4px}
   .hidden{display:none !important}
   footer{font-size:12px;color:var(--muted);text-align:center;line-height:1.6;max-width:36ch}
@@ -119,6 +106,12 @@
   <div class="modes" id="modes">
     <button class="chip" type="button" data-mode="session">Session</button>
     <button class="chip" type="button" data-mode="assess">Find my pace</button>
+    <button class="chip" type="button" data-mode="check">Strap check</button>
+  </div>
+
+  <div class="strap" id="strapbar">
+    <span class="dot" id="dot"></span><span id="strapmsg">Strap not connected</span>
+    <button class="quiet" id="connect" style="padding:2px 6px">Connect</button>
   </div>
 
   <div class="stage" id="stage">
@@ -139,59 +132,41 @@
 
   <div class="controls" id="controls">
     <div class="controls" id="setupSession">
-      <div class="field">
-        <p>Session length</p>
-        <div class="chips" id="durations"></div>
-      </div>
-      <div class="field">
-        <p>Pace, breaths per minute</p>
-        <div class="chips" id="rates"></div>
-      </div>
+      <div class="field"><p>Session length</p><div class="chips" id="durations"></div></div>
+      <div class="field"><p>Pace, breaths per minute</p><div class="chips" id="rates"></div></div>
     </div>
 
     <div class="controls hidden" id="setupAssess">
-      <div class="field">
-        <p>Minutes at each rate</p>
-        <div class="chips" id="steplen"></div>
-      </div>
-      <div class="field">
-        <p>Rest between rates</p>
-        <div class="chips" id="restlen"></div>
-      </div>
-      <div class="field">
-        <p>Baseline before starting</p>
-        <div class="chips" id="baselen"></div>
-      </div>
-      <div class="field">
-        <p>Order of rates</p>
-        <div class="chips" id="order"></div>
-      </div>
+      <div class="field"><p>Rates to test</p><div class="chips" id="grid"></div></div>
+      <div class="field"><p>Minutes at each rate</p><div class="chips" id="steplen"></div></div>
+      <div class="field"><p>Rest between rates</p><div class="chips" id="restlen"></div></div>
+      <div class="field"><p>Baseline before starting</p><div class="chips" id="baselen"></div></div>
+      <div class="field"><p>Order</p><div class="chips" id="order"></div></div>
       <p class="est" id="est"></p>
     </div>
 
-    <div class="row">
-      <label for="vol">Volume</label>
-      <input id="vol" type="range" min="0" max="100" value="60">
-    </div>
-    <div class="row">
-      <input id="speak" type="checkbox" checked>
-      <label for="speak">Spoken cues between steps</label>
+    <div class="controls hidden" id="setupCheck">
+      <p class="est">Two minutes at 5.5 to confirm the strap is giving clean beats.</p>
     </div>
 
-    <div class="hint hidden" id="silent">
-      <p id="silentNote"></p>
-      <button type="button" id="test">Play a test tone</button>
-    </div>
+    <div class="row"><label for="vol">Volume</label><input id="vol" type="range" min="0" max="100" value="60"></div>
+    <div class="row"><input id="speak" type="checkbox" checked><label for="speak">Spoken cues between steps</label></div>
 
     <button class="go" id="go">Begin</button>
     <button class="quiet hidden" id="again">Start again</button>
   </div>
 
+  <div class="panel hidden" id="results">
+    <table id="restable"></table>
+  </div>
+
   <div class="panel hidden" id="panel">
-    <p>Timeline of the session, for lining up against your watch recording. Times are local
-       clock time — no lap presses needed.</p>
-    <pre id="timeline"></pre>
-    <button class="quiet" id="copy">Copy timeline</button>
+    <p id="paneltip">Timeline and beat data. Copy this and hand it over for analysis.</p>
+    <pre id="dump"></pre>
+    <div style="display:flex;gap:6px">
+      <button class="quiet" id="copy">Copy all</button>
+      <button class="quiet" id="dl">Download</button>
+    </div>
   </div>
 
   <footer id="note">Inhale on the rising tone, exhale on the low one. Breathe through your nose, into your belly, without straining.</footer>
@@ -199,428 +174,380 @@
 
 <script>
 (() => {
-  const $ = id => document.getElementById(id);
-  const stage=$('stage'), breath=$('breath'), marker=$('marker'), cue=$('cue'), clock=$('clock'),
-        breaths=$('breaths'), bar=$('bar'), steptrack=$('steptrack'), go=$('go'), again=$('again'),
-        controls=$('controls'), setupSession=$('setupSession'), setupAssess=$('setupAssess'),
-        panel=$('panel'), timelineEl=$('timeline'), note=$('note'), volEl=$('vol'), speakEl=$('speak'),
-        silentEl=$('silent'), silentNote=$('silentNote');
+  const $=id=>document.getElementById(id);
+  const stage=$('stage'),breath=$('breath'),marker=$('marker'),cue=$('cue'),clock=$('clock'),
+        breaths=$('breaths'),bar=$('bar'),steptrack=$('steptrack'),go=$('go'),again=$('again'),
+        controls=$('controls'),panel=$('panel'),results=$('results'),dump=$('dump'),
+        note=$('note'),volEl=$('vol'),speakEl=$('speak'),dot=$('dot'),strapmsg=$('strapmsg');
 
   const DURATIONS=[3,5,10,15,20,30];
   const RATES=[4.5,5,5.5,6];
-  const ASSESS_RATES=[6.5,6,5.5,5,4.5];
-  const LEADIN=10;          // settle before the first paced breath
-  const ANNOUNCE=12;        // spoken warning before a rate change
-  const SETTINGS='coherence.settings';
+  const GRIDS={coarse:[6.5,6,5.5,5,4.5], fine:[6,5.5,5.25,5,4.75,4.5]};
+  const LEADIN=10, ANNOUNCE=12, SETTINGS='coherence.settings';
 
   let mode='session', minutes=10, rate=5.5;
-  let stepMin=3, restSec=90, baseMin=3, order='desc';
+  let grid='fine', stepMin=2, restSec=90, baseMin=2, order='desc';
   let volume=.6, speech=true;
 
-  // ---------- persistence ----------
-  try{
-    const s=JSON.parse(localStorage.getItem(SETTINGS)||'{}');
-    if(s.minutes) minutes=s.minutes;
-    if(s.rate) rate=s.rate;
-    if(s.stepMin) stepMin=s.stepMin;
-    if(typeof s.restSec==='number') restSec=s.restSec;
-    if(typeof s.baseMin==='number') baseMin=s.baseMin;
-    if(s.order) order=s.order;
-    if(typeof s.volume==='number') volume=s.volume;
-    if(typeof s.speech==='boolean') speech=s.speech;
+  try{ const s=JSON.parse(localStorage.getItem(SETTINGS)||'{}');
+    ({minutes=minutes,rate=rate,grid=grid,stepMin=stepMin,restSec=restSec,
+      baseMin=baseMin,order=order,volume=volume,speech=speech}=s);
   }catch(e){}
-  function save(){
-    try{ localStorage.setItem(SETTINGS, JSON.stringify(
-      {minutes,rate,stepMin,restSec,baseMin,order,volume,speech})); }catch(e){}
-  }
+  const save=()=>{try{localStorage.setItem(SETTINGS,JSON.stringify(
+    {minutes,rate,grid,stepMin,restSec,baseMin,order,volume,speech}));}catch(e){}};
 
-  // ---------- controls ----------
-  function chips(host, values, label, get, set){
+  function chips(host,values,label,get,set){
     host.innerHTML='';
     values.forEach(v=>{
       const b=document.createElement('button');
-      b.className='chip'; b.type='button'; b.textContent=label(v);
-      b.setAttribute('aria-pressed', String(get()===v));
-      b.onclick=()=>{ set(v); save(); chips(host,values,label,get,set); idle(); };
+      b.className='chip';b.type='button';b.textContent=label(v);
+      b.setAttribute('aria-pressed',String(get()===v));
+      b.onclick=()=>{set(v);save();chips(host,values,label,get,set);idle();};
       host.appendChild(b);
     });
   }
-  const build=()=>{
-    chips($('durations'), DURATIONS, v=>v+' min', ()=>minutes, v=>minutes=v);
-    chips($('rates'), RATES, v=>v.toFixed(1), ()=>rate, v=>rate=v);
-    chips($('steplen'), [2,3,4], v=>v+' min', ()=>stepMin, v=>stepMin=v);
-    chips($('restlen'), [60,90,120], v=>(v/60===1?'1 min':(v/60)+' min'), ()=>restSec, v=>restSec=v);
-    chips($('baselen'), [0,2,3], v=>v?v+' min':'none', ()=>baseMin, v=>baseMin=v);
-    chips($('order'), ['desc','asc'], v=>v==='desc'?'6.5 → 4.5':'4.5 → 6.5', ()=>order, v=>order=v);
-  };
-  build();
+  chips($('durations'),DURATIONS,v=>v+' min',()=>minutes,v=>minutes=v);
+  chips($('rates'),RATES,v=>v.toFixed(1),()=>rate,v=>rate=v);
+  chips($('grid'),['coarse','fine'],v=>v==='coarse'?'6.5 to 4.5':'6.0 to 4.5, fine',()=>grid,v=>grid=v);
+  chips($('steplen'),[2,3,4],v=>v+' min',()=>stepMin,v=>stepMin=v);
+  chips($('restlen'),[60,90,120],v=>v===60?'1 min':(v/60)+' min',()=>restSec,v=>restSec=v);
+  chips($('baselen'),[0,2,3],v=>v?v+' min':'none',()=>baseMin,v=>baseMin=v);
+  chips($('order'),['desc','asc'],v=>v==='desc'?'fast to slow':'slow to fast',()=>order,v=>order=v);
 
   volEl.value=Math.round(volume*100);
-  volEl.oninput=()=>{ volume=volEl.value/100; if(master) master.gain.value=volume; save(); };
+  volEl.oninput=()=>{volume=volEl.value/100;if(master)master.gain.value=volume;save();};
   speakEl.checked=speech;
-  speakEl.onchange=()=>{ speech=speakEl.checked; save(); };
+  speakEl.onchange=()=>{speech=speakEl.checked;save();};
 
-  [...$('modes').children].forEach(b=>{
-    b.onclick=()=>{ mode=b.dataset.mode; setMode(); };
-  });
+  [...$('modes').children].forEach(b=>b.onclick=()=>{mode=b.dataset.mode;setMode();});
   function setMode(){
-    [...$('modes').children].forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.mode===mode)));
-    setupSession.classList.toggle('hidden', mode!=='session');
-    setupAssess.classList.toggle('hidden', mode!=='assess');
+    [...$('modes').children].forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
+    $('setupSession').classList.toggle('hidden',mode!=='session');
+    $('setupAssess').classList.toggle('hidden',mode!=='assess');
+    $('setupCheck').classList.toggle('hidden',mode!=='check');
     steptrack.classList.add('hidden');
-    go.textContent = mode==='assess' ? 'Start assessment' : 'Begin';
+    go.textContent = mode==='assess'?'Start assessment':(mode==='check'?'Run check':'Begin');
     idle();
   }
 
-  // ---------- audio ----------
-  let ctx=null, master=null;
+  let ctx=null,master=null;
   function audio(){
-    if(!ctx){
-      ctx=new (window.AudioContext||window.webkitAudioContext)();
-      master=ctx.createGain(); master.gain.value=volume; master.connect(ctx.destination);
-    }
-    if(ctx.state==='suspended') ctx.resume();
+    if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();
+      master=ctx.createGain();master.gain.value=volume;master.connect(ctx.destination);}
+    if(ctx.state==='suspended')ctx.resume();
     return ctx;
   }
+  const now=()=>ctx?ctx.currentTime:performance.now()/1000;
   function tone(at,{f,dur,glide,gain}){
-    const g=ctx.createGain(), lp=ctx.createBiquadFilter();
-    lp.type='lowpass'; lp.frequency.value=f*3.2; lp.Q.value=.4;
-    g.connect(lp); lp.connect(master);
+    const g=ctx.createGain(),lp=ctx.createBiquadFilter();
+    lp.type='lowpass';lp.frequency.value=f*3.2;lp.Q.value=.4;
+    g.connect(lp);lp.connect(master);
     g.gain.setValueAtTime(.0001,at);
     g.gain.exponentialRampToValueAtTime(gain,at+.07);
     g.gain.exponentialRampToValueAtTime(.0001,at+dur);
     [[f,1],[f*1.5,.22],[f*2,.12]].forEach(([freq,amp])=>{
-      const o=ctx.createOscillator(), og=ctx.createGain();
-      o.type='sine'; og.gain.value=amp;
+      const o=ctx.createOscillator(),og=ctx.createGain();
+      o.type='sine';og.gain.value=amp;
       o.frequency.setValueAtTime(freq,at);
       o.frequency.exponentialRampToValueAtTime(freq*glide,at+dur*.85);
-      o.connect(og); og.connect(g); o.start(at); o.stop(at+dur+.1);
+      o.connect(og);og.connect(g);o.start(at);o.stop(at+dur+.1);
     });
   }
-  const inhaleTone = at => tone(at,{f:587.33,dur:.85,glide:1.06,gain:.30});
-  const exhaleTone = at => tone(at,{f:261.63,dur:1.35,glide:.94,gain:.24});
-  const prepTone   = at => tone(at,{f:392.00,dur:.45,glide:1,   gain:.13});
-  const restTone   = at => tone(at,{f:196.00,dur:1.6, glide:1,   gain:.14});
-  function finishChime(at){ [392,329.63,261.63].forEach((f,i)=>tone(at+i*.55,{f,dur:1.6,glide:1,gain:.18})); }
-
-  // The platform hands out whatever voice is first in its list, which on a Mac can be a
-  // novelty face and on Linux a flat formant synth. Ask for the known-natural ones by name
-  // instead, best first, and fall through to the platform default rather than risk picking
-  // something worse. getVoices() is empty until the list loads, so re-pick when it lands.
-  const VOICES=['Ava','Allison','Samantha','Zoe','Serena','Susan','Karen','Moira','Tessa',
-                'Google US English','Google UK English Female',
-                'Microsoft Aria','Microsoft Jenny','Microsoft Zira'];
-  let voice=null;
-  function pickVoice(){
-    let all=[]; try{ all=speechSynthesis.getVoices()||[]; }catch(e){}
-    if(!all.length) return;
-    const en=all.filter(v=>/^en\b|^en-/i.test(v.lang||''));
-    const pool=en.length?en:all;
-    for(const want of VOICES){
-      const hit=pool.find(v=>v.name===want)||pool.find(v=>(v.name||'').startsWith(want));
-      if(hit){ voice=hit; return; }
-    }
-    voice=null;
-  }
-  if('speechSynthesis' in window){
-    pickVoice();
-    try{ speechSynthesis.onvoiceschanged=pickVoice; }catch(e){}
-  }
-
-  // "six point five" is the giveaway that a machine is talking. Say it the way a person would.
-  const SPOKEN={6.5:'six and a half',6:'six',5.5:'five and a half',5:'five',4.5:'four and a half'};
-  const spoken = r => SPOKEN[r] || r.toFixed(1).replace('.0','');
-
+  const inhaleTone=at=>tone(at,{f:587.33,dur:.85,glide:1.06,gain:.30});
+  const exhaleTone=at=>tone(at,{f:261.63,dur:1.35,glide:.94,gain:.24});
+  const prepTone  =at=>tone(at,{f:392.00,dur:.45,glide:1,gain:.13});
+  const restTone  =at=>tone(at,{f:196.00,dur:1.6,glide:1,gain:.14});
+  const finishChime=at=>[392,329.63,261.63].forEach((f,i)=>tone(at+i*.55,{f,dur:1.6,glide:1,gain:.18}));
   function say(text){
-    if(!speech || !('speechSynthesis' in window)) return;
+    if(!speech||!('speechSynthesis' in window))return;
+    try{const u=new SpeechSynthesisUtterance(text);u.rate=.92;u.volume=Math.min(1,volume+.15);
+      speechSynthesis.speak(u);}catch(e){}
+  }
+
+  let dev=null,beats=[],beatClock=null,liveHR=0,bad=0,seen=0;
+  const HAS_BLE = !!(navigator.bluetooth && navigator.bluetooth.requestDevice);
+  if(!HAS_BLE){
+    $('connect').classList.add('hidden');
+    strapmsg.textContent='This browser has no Bluetooth. On iPhone use Bluefy.';
+  }
+  $('connect').onclick=async()=>{
+    if(dev&&dev.gatt.connected){dev.gatt.disconnect();return;}
     try{
-      const u=new SpeechSynthesisUtterance(text);
-      if(voice){ u.voice=voice; u.lang=voice.lang; }
-      u.rate=.86; u.pitch=.95; u.volume=Math.min(1,volume+.15);
-      speechSynthesis.speak(u);
-    }catch(e){}
+      strapmsg.textContent='Looking for the strap…';
+      dev=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});
+      dev.addEventListener('gattserverdisconnected',()=>{
+        dot.className='dot';strapmsg.textContent='Strap disconnected';$('connect').textContent='Connect';});
+      const s=await dev.gatt.connect();
+      const svc=await s.getPrimaryService('heart_rate');
+      const ch=await svc.getCharacteristic('heart_rate_measurement');
+      await ch.startNotifications();
+      ch.addEventListener('characteristicvaluechanged',e=>onBeat(e.target.value));
+      dot.className='dot on';$('connect').textContent='Disconnect';
+      strapmsg.textContent=(dev.name||'Strap')+' connected';
+    }catch(err){
+      dot.className='dot bad';
+      strapmsg.textContent='Could not connect. Bluetooth on, strap damp?';
+    }
+  };
+  function onBeat(dv){
+    const flags=dv.getUint8(0);
+    let i=1;
+    if(flags&0x01){liveHR=dv.getUint16(i,true);i+=2;} else {liveHR=dv.getUint8(i);i+=1;}
+    if(flags&0x08)i+=2;
+    if(!(flags&0x10))return;
+    const rrs=[];
+    for(;i+1<dv.byteLength;i+=2)rrs.push(dv.getUint16(i,true)/1024*1000);
+    if(!rrs.length)return;
+    const t=now(), tot=rrs.reduce((a,b)=>a+b,0)/1000;
+    if(beatClock===null||Math.abs(t-beatClock)>3)beatClock=t-tot;
+    rrs.forEach(rr=>{
+      beatClock+=rr/1000;
+      seen++;
+      const prev=beats.length?beats[beats.length-1][1]:rr;
+      if(rr<300||rr>2000||Math.abs(rr-prev)>0.25*prev)bad++;
+      beats.push([beatClock,Math.round(rr)]);
+    });
+    if(dev&&dev.gatt.connected){
+      dot.className = seen>20 && bad/seen>0.05 ? 'dot bad' : 'dot on';
+      strapmsg.textContent = liveHR+' bpm · '+seen+' beats · '+(100*bad/Math.max(1,seen)).toFixed(1)+'% flagged';
+    }
   }
 
-  // ---------- the silent switch ----------
-  // iPhones route both web audio and spoken cues through the ringer, so with silent mode on
-  // nothing is heard and nothing on screen says why. iOS 16.4 and up let a page opt out of
-  // that; where it can't, name the problem and offer a tone to check against. On anything
-  // else the block is dropped outright, so the show/hide selectors below never see it.
-  const iOS = /iP(hone|ad|od)/.test(navigator.userAgent)
-           || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
-  let silentProof=false;
-  try{ if(navigator.audioSession){ navigator.audioSession.type='playback'; silentProof=true; } }catch(e){}
-  if(iOS && !silentProof){
-    silentNote.textContent='Silent mode mutes the tones and the spoken cues. If you hear nothing, '
-      +'turn the ring switch back on — the volume here has no effect on it.';
-    silentEl.classList.remove('hidden');
-    $('test').onclick=()=>{ audio(); inhaleTone(ctx.currentTime+.05); };
-  }else{
-    silentEl.remove();
-  }
-
-  // ---------- plan ----------
-  // segments: {kind:'lead'|'free'|'breathe', label, start, end, rate?, cycles?, cycle?}
   function makePlan(){
-    const segs=[];
-    let t=0;
-    const push=(kind,label,dur,extra={})=>{
-      segs.push(Object.assign({kind,label,start:t,end:t+dur,dur},extra)); t+=dur;
-    };
+    const segs=[];let t=0;
+    const push=(kind,label,dur,extra={})=>{segs.push(Object.assign({kind,label,start:t,end:t+dur,dur},extra));t+=dur;};
     push('lead','Settle',LEADIN);
-    if(mode==='session'){
-      const cyc=60/rate, n=Math.max(1,Math.round(minutes*60/cyc));
-      push('breathe',rate.toFixed(1)+' bpm', n*cyc, {rate, cycles:n, cycle:cyc});
+    if(mode==='session'||mode==='check'){
+      const r=mode==='check'?5.5:rate, mins=mode==='check'?2:minutes;
+      const cyc=60/r,n=Math.max(1,Math.round(mins*60/cyc));
+      push('breathe',r.toFixed(1)+' bpm',n*cyc,{rate:r,cycles:n,cycle:cyc});
       return segs;
     }
-    if(baseMin) push('free','Breathe normally', baseMin*60, {baseline:true});
-    const list = order==='desc' ? ASSESS_RATES : [...ASSESS_RATES].reverse();
+    if(baseMin)push('free','Breathe normally',baseMin*60,{baseline:true});
+    const list=order==='desc'?GRIDS[grid]:[...GRIDS[grid]].reverse();
     list.forEach((r,i)=>{
-      const cyc=60/r, n=Math.max(1,Math.round(stepMin*60/cyc));
-      push('breathe', r.toFixed(1)+' bpm', n*cyc, {rate:r, cycles:n, cycle:cyc, step:i+1, steps:list.length});
-      if(i<list.length-1) push('free','Rest', restSec);
+      const cyc=60/r,n=Math.max(1,Math.round(stepMin*60/cyc));
+      push('breathe',r.toFixed(2)+' bpm',n*cyc,{rate:r,cycles:n,cycle:cyc,step:i+1,steps:list.length});
+      if(i<list.length-1)push('free','Rest',restSec);
     });
     return segs;
   }
-
   function planEvents(segs){
     const ev=[];
     segs.forEach(s=>{
       if(s.kind==='breathe'){
         for(let c=0;c<s.cycles;c++){
-          ev.push({t:s.start+c*s.cycle, f:inhaleTone});
-          ev.push({t:s.start+c*s.cycle+s.cycle/2, f:exhaleTone});
+          ev.push({t:s.start+c*s.cycle,f:inhaleTone});
+          ev.push({t:s.start+c*s.cycle+s.cycle/2,f:exhaleTone});
         }
-        if(s.start>=ANNOUNCE) ev.push({t:s.start-3, f:prepTone});
-      }else if(s.kind==='free' && !s.baseline){
-        ev.push({t:s.start+.2, f:restTone});
-      }
+        if(s.start>=ANNOUNCE)ev.push({t:s.start-3,f:prepTone});
+      }else if(s.kind==='free'&&!s.baseline)ev.push({t:s.start+.2,f:restTone});
     });
     return ev.sort((a,b)=>a.t-b.t);
   }
-
   function planCues(segs){
     const c=[];
     segs.forEach(s=>{
-      if(s.kind==='breathe' && mode==='assess'){
-        c.push({t:Math.max(0,s.start-ANNOUNCE),
-                say:`Next, ${spoken(s.rate)} breaths per minute.`});
-      }
-      if(s.kind==='free' && !s.baseline) c.push({t:s.start+1.2, say:'Rest. Breathe normally.'});
-      if(s.kind==='free' && s.baseline)  c.push({t:s.start+.5, say:'Baseline. Breathe normally.'});
+      if(s.kind==='breathe'&&mode==='assess')
+        c.push({t:Math.max(0,s.start-ANNOUNCE),say:`Next, ${String(s.rate).replace('.',' point ')} breaths per minute`});
+      if(s.kind==='free'&&!s.baseline)c.push({t:s.start+1.2,say:'Rest. Breathe normally.'});
+      if(s.kind==='free'&&s.baseline)c.push({t:s.start+.5,say:'Baseline. Breathe normally.'});
     });
     return c.sort((a,b)=>a.t-b.t);
   }
 
-  // ---------- run ----------
-  let running=false, plan=[], events=[], cues=[], evIdx=0, cueIdx=0,
-      t0=0, total=0, wall0=0, timer=null, raf=null, lock=null;
+  let running=false,plan=[],events=[],cues=[],evIdx=0,cueIdx=0,
+      t0=0,total=0,wall0=0,timer=null,raf=null,lock=null;
 
   function begin(){
     audio();
-    plan=makePlan();
-    total=plan[plan.length-1].end;
-    events=planEvents(plan); cues=planCues(plan);
-    evIdx=0; cueIdx=0;
-    t0=ctx.currentTime;
-    wall0=Date.now();
-    running=true;
-
-    controls.querySelectorAll('.field,.row,.hint').forEach(e=>e.classList.add('hidden'));
-    setupSession.classList.add('hidden'); setupAssess.classList.add('hidden');
-    $('modes').classList.add('hidden'); panel.classList.add('hidden');
-    again.classList.add('hidden'); go.classList.remove('hidden');
-    go.textContent='End';
-    steptrack.classList.toggle('hidden', mode!=='assess');
+    plan=makePlan();total=plan[plan.length-1].end;
+    events=planEvents(plan);cues=planCues(plan);
+    evIdx=0;cueIdx=0;beats=[];beatClock=null;bad=0;seen=0;
+    t0=ctx.currentTime;wall0=Date.now();running=true;
+    controls.querySelectorAll('.field,.row').forEach(e=>e.classList.add('hidden'));
+    ['setupSession','setupAssess','setupCheck'].forEach(i=>$(i).classList.add('hidden'));
+    $('modes').classList.add('hidden');panel.classList.add('hidden');results.classList.add('hidden');
+    again.classList.add('hidden');go.classList.remove('hidden');go.textContent='End';
+    steptrack.classList.toggle('hidden',mode!=='assess');
     note.textContent = mode==='assess'
       ? 'Keep every breath the same depth, at every rate. Comfortable, not full.'
       : 'Follow the ring. Let the exhale be unforced.';
-
-    say(mode==='assess' ? 'Assessment starting. Sit still and breathe normally.' : 'Settle.');
-
-    schedule();
-    timer=setInterval(schedule,1000);
-    document.addEventListener('visibilitychange',onVis);
-    wake();
-    loop();
+    say(mode==='assess'?'Assessment starting. Sit still and breathe normally.':'Settle.');
+    schedule();timer=setInterval(schedule,1000);
+    document.addEventListener('visibilitychange',onVis);wake();loop();
   }
-
   function schedule(){
-    if(!running || !ctx) return;
-    const horizon=ctx.currentTime+12;
-    while(evIdx<events.length && t0+events[evIdx].t<=horizon){
-      events[evIdx].f(t0+events[evIdx].t); evIdx++;
-    }
+    if(!running||!ctx)return;
+    const h=ctx.currentTime+12;
+    while(evIdx<events.length&&t0+events[evIdx].t<=h){events[evIdx].f(t0+events[evIdx].t);evIdx++;}
   }
-
-  function segAt(el){
-    for(const s of plan) if(el < s.end) return s;
-    return plan[plan.length-1];
-  }
+  const segAt=el=>{for(const s of plan)if(el<s.end)return s;return plan[plan.length-1];};
 
   function loop(){
     raf=requestAnimationFrame(loop);
-    if(!running || !ctx) return;
+    if(!running||!ctx)return;
     const el=ctx.currentTime-t0;
-
-    while(cueIdx<cues.length && el>=cues[cueIdx].t){ say(cues[cueIdx].say); cueIdx++; }
-
-    if(el>=total){ complete(); return; }
-
-    const s=segAt(el), inSeg=el-s.start, left=s.end-el;
+    while(cueIdx<cues.length&&el>=cues[cueIdx].t){say(cues[cueIdx].say);cueIdx++;}
+    if(el>=total){complete();return;}
+    const s=segAt(el),inSeg=el-s.start,left=s.end-el;
     bar.style.width=(100*el/total).toFixed(2)+'%';
-
     if(s.kind==='breathe'){
-      const p=(inSeg%s.cycle)/s.cycle;
-      const v=(1-Math.cos(2*Math.PI*p))/2;
+      const p=(inSeg%s.cycle)/s.cycle,v=(1-Math.cos(2*Math.PI*p))/2;
       breath.setAttribute('r',(28+58*v).toFixed(2));
-      const a=(p*2*Math.PI)-Math.PI/2;
+      const a=p*2*Math.PI-Math.PI/2;
       marker.classList.remove('off');
       marker.setAttribute('cx',(100+90*Math.cos(a)).toFixed(2));
       marker.setAttribute('cy',(100+90*Math.sin(a)).toFixed(2));
-      stage.dataset.phase = p<.5?'in':'out';
-      cue.textContent = p<.5?'Inhale':'Exhale';
+      stage.dataset.phase=p<.5?'in':'out';
+      cue.textContent=p<.5?'Inhale':'Exhale';
       clock.textContent=fmt(left);
       breaths.textContent = mode==='assess'
-        ? `${s.rate.toFixed(1)} bpm · step ${s.step} of ${s.steps}`
-        : `${Math.floor(inSeg/s.cycle)+1} of ${s.cycles} breaths`;
+        ? s.rate+' bpm · step '+s.step+' of '+s.steps
+        : (Math.floor(inSeg/s.cycle)+1)+' of '+s.cycles+' breaths';
     }else{
       breath.setAttribute('r',(28+58*.28).toFixed(2));
-      marker.classList.add('off');
-      stage.removeAttribute('data-phase');
-      cue.textContent = s.kind==='lead' ? 'Settle' : (s.baseline?'Baseline':'Rest');
-      clock.textContent = s.kind==='lead' ? String(Math.max(1,Math.ceil(left))) : fmt(left);
-      breaths.textContent = s.kind==='lead' ? 'starting on the first tone' : 'breathe normally';
+      marker.classList.add('off');stage.removeAttribute('data-phase');
+      cue.textContent=s.kind==='lead'?'Settle':(s.baseline?'Baseline':'Rest');
+      clock.textContent=s.kind==='lead'?String(Math.max(1,Math.ceil(left))):fmt(left);
+      breaths.textContent=s.kind==='lead'?'starting on the first tone':'breathe normally';
     }
-
-    if(mode==='assess') drawTrack(s);
+    if(mode==='assess')drawTrack(s,el);
   }
-
-  function drawTrack(cur){
-    const list = order==='desc' ? ASSESS_RATES : [...ASSESS_RATES].reverse();
-    steptrack.innerHTML = list.map(r=>{
-      const label=r.toFixed(1);
-      if(cur.kind==='breathe' && cur.rate===r) return `<b>${label}</b>`;
-      const done = plan.some(s=>s.kind==='breathe' && s.rate===r && s.end <= (ctx.currentTime-t0));
-      return done ? `<s>${label}</s>` : `<span>${label}</span>`;
+  function drawTrack(cur,el){
+    const list=order==='desc'?GRIDS[grid]:[...GRIDS[grid]].reverse();
+    steptrack.innerHTML=list.map(r=>{
+      if(cur.kind==='breathe'&&cur.rate===r)return '<b>'+r+'</b>';
+      const done=plan.some(s=>s.kind==='breathe'&&s.rate===r&&s.end<=el);
+      return done?'<s>'+r+'</s>':'<span>'+r+'</span>';
     }).join('');
   }
 
   function complete(){
-    running=false;
-    clearInterval(timer); cancelAnimationFrame(raf);
+    running=false;clearInterval(timer);cancelAnimationFrame(raf);
     document.removeEventListener('visibilitychange',onVis);
-    if(lock){ lock.release().catch(()=>{}); lock=null; }
+    if(lock){lock.release().catch(()=>{});lock=null;}
     finishChime(ctx.currentTime+.15);
-    say(mode==='assess' ? 'Assessment complete.' : 'Done.');
-
-    cue.textContent='Done'; clock.textContent='0:00';
-    breaths.textContent = mode==='assess' ? 'all rates finished' : '';
-    bar.style.width='100%';
-    breath.setAttribute('r',30); marker.classList.add('off');
-    stage.removeAttribute('data-phase');
-    go.classList.add('hidden'); again.classList.remove('hidden');
-    note.textContent = mode==='assess'
-      ? 'Export the FIT from Garmin Connect and pair it with the timeline below.'
+    say(mode==='assess'?'Assessment complete.':'Done.');
+    cue.textContent='Done';clock.textContent='0:00';bar.style.width='100%';
+    breath.setAttribute('r',30);marker.classList.add('off');stage.removeAttribute('data-phase');
+    breaths.textContent=beats.length?beats.length+' beats recorded':'';
+    go.classList.add('hidden');again.classList.remove('hidden');
+    note.textContent = beats.length
+      ? 'Copy the block below and hand it over for analysis.'
       : 'Sit for a moment before you get up.';
-
-    if(mode==='assess'){ timelineEl.textContent=timelineText(); panel.classList.remove('hidden'); }
-    setTimeout(()=>{ if(ctx){ ctx.close().catch(()=>{}); ctx=null; master=null; } }, 4000);
+    if(mode!=='session'||beats.length){dump.textContent=exportText();panel.classList.remove('hidden');}
+    if(beats.length&&mode!=='session')showResults();
+    setTimeout(()=>{if(ctx&&!running){ctx.close().catch(()=>{});ctx=null;master=null;}},4000);
   }
-
   function abort(){
-    running=false;
-    clearInterval(timer); cancelAnimationFrame(raf);
+    running=false;clearInterval(timer);cancelAnimationFrame(raf);
     document.removeEventListener('visibilitychange',onVis);
-    if(lock){ lock.release().catch(()=>{}); lock=null; }
-    if('speechSynthesis' in window) try{ speechSynthesis.cancel(); }catch(e){}
-    if(ctx){ ctx.close().catch(()=>{}); ctx=null; master=null; }
+    if(lock){lock.release().catch(()=>{});lock=null;}
+    if('speechSynthesis' in window)try{speechSynthesis.cancel();}catch(e){}
+    if(ctx){ctx.close().catch(()=>{});ctx=null;master=null;}
     reset();
   }
-
   function reset(){
-    controls.querySelectorAll('.field,.row,.hint').forEach(e=>e.classList.remove('hidden'));
+    controls.querySelectorAll('.field,.row').forEach(e=>e.classList.remove('hidden'));
     $('modes').classList.remove('hidden');
-    panel.classList.add('hidden');
-    again.classList.add('hidden'); go.classList.remove('hidden');
-    breath.setAttribute('r',30); marker.classList.remove('off');
-    marker.setAttribute('cx',100); marker.setAttribute('cy',10);
+    panel.classList.add('hidden');results.classList.add('hidden');
+    again.classList.add('hidden');go.classList.remove('hidden');
+    breath.setAttribute('r',30);marker.classList.remove('off');
+    marker.setAttribute('cx',100);marker.setAttribute('cy',10);
     stage.removeAttribute('data-phase');
     note.textContent='Inhale on the rising tone, exhale on the low one. Breathe through your nose, into your belly, without straining.';
     setMode();
   }
 
-  // ---------- timeline ----------
-  function stamp(offset){
-    const d=new Date(wall0+offset*1000);
-    const p=n=>String(n).padStart(2,'0');
-    return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-  }
-  function timelineText(){
-    const d=new Date(wall0);
-    const tz=-d.getTimezoneOffset(), sg=tz>=0?'+':'-', ab=Math.abs(tz);
-    const pad=n=>String(n).padStart(2,'0');
-    const iso=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T`+
-              `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`+
-              `${sg}${pad(Math.floor(ab/60))}:${pad(ab%60)}`;
-    const lines=[
-      'Coherence — resonance frequency assessment',
-      'started        '+iso,
-      'order          '+(order==='desc'?'6.5 to 4.5':'4.5 to 6.5'),
-      'step / rest    '+stepMin+' min / '+(restSec/60)+' min',
-      'baseline       '+(baseMin?baseMin+' min':'none'),
-      '',
-      'clock     elapsed   segment'
-    ];
-    plan.forEach(s=>{
-      if(s.kind==='lead') return;
-      const label = s.kind==='breathe' ? s.rate.toFixed(1)+' bpm'
-                  : (s.baseline?'baseline (spontaneous)':'rest (spontaneous)');
-      lines.push(`${stamp(s.start)}  ${fmt(s.start).padStart(6,' ')}   ${label}`);
+  function fit(pts,f){
+    const n=pts.length;if(n<12)return null;
+    const A=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]],b=[0,0,0,0];
+    pts.forEach(([t,y])=>{
+      const r=[1,t,Math.cos(2*Math.PI*f*t),Math.sin(2*Math.PI*f*t)];
+      for(let i=0;i<4;i++){b[i]+=r[i]*y;for(let j=0;j<4;j++)A[i][j]+=r[i]*r[j];}
     });
-    lines.push(`${stamp(total)}  ${fmt(total).padStart(6,' ')}   end`);
-    return lines.join('\n');
+    for(let i=0;i<4;i++){
+      let p=i;for(let k=i+1;k<4;k++)if(Math.abs(A[k][i])>Math.abs(A[p][i]))p=k;
+      [A[i],A[p]]=[A[p],A[i]];[b[i],b[p]]=[b[p],b[i]];
+      if(Math.abs(A[i][i])<1e-12)return null;
+      for(let k=i+1;k<4;k++){const m=A[k][i]/A[i][i];
+        for(let j=i;j<4;j++)A[k][j]-=m*A[i][j];b[k]-=m*b[i];}
+    }
+    const c=[0,0,0,0];
+    for(let i=3;i>=0;i--){let s=b[i];for(let j=i+1;j<4;j++)s-=A[i][j]*c[j];c[i]=s/A[i][i];}
+    return 2*Math.hypot(c[2],c[3]);
+  }
+  function showResults(){
+    const rows=[];
+    plan.filter(s=>s.kind==='breathe').forEach(s=>{
+      const a=s.start+Math.min(60,s.dur*0.35);
+      const pts=beats.filter(([t])=>t-t0>=a&&t-t0<s.end).map(([t,rr])=>[t-t0-a,60000/rr]);
+      const amp=fit(pts,s.rate/60);
+      rows.push([s.rate,pts.length,amp]);
+    });
+    const best=rows.filter(r=>r[2]).sort((x,y)=>y[2]-x[2])[0];
+    $('restable').innerHTML='<tr><th>rate</th><th>beats</th><th>swing, bpm</th></tr>'+
+      rows.map(([r,n,a])=>'<tr><td>'+(best&&best[0]===r?'<b>'+r+'</b>':r)+'</td><td>'+n+'</td><td>'+
+        (a?a.toFixed(1):'—')+'</td></tr>').join('');
+    results.classList.remove('hidden');
+  }
+
+  function stamp(o){const d=new Date(wall0+o*1000),p=n=>String(n).padStart(2,'0');
+    return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());}
+  function exportText(){
+    const d=new Date(wall0),p=n=>String(n).padStart(2,'0'),
+      tz=-d.getTimezoneOffset(),sg=tz>=0?'+':'-',ab=Math.abs(tz);
+    const L=['# coherence rr export v1',
+      '# started '+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+
+        p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())+sg+p(Math.floor(ab/60))+':'+p(ab%60),
+      '# mode '+mode+(mode==='assess'?'  order '+order+'  step '+stepMin+'min  rest '+(restSec/60)+'min':''),
+      '# beats '+beats.length+'  flagged '+(100*bad/Math.max(1,seen)).toFixed(1)+'%',
+      '# segments: label,start_s,clock',''];
+    plan.forEach(s=>{ if(s.kind!=='lead')
+      L.push('seg,'+(s.kind==='breathe'?s.rate:(s.baseline?'baseline':'rest'))+','+
+             s.start.toFixed(1)+','+stamp(s.start)); });
+    L.push('','# rr intervals: t_s,rr_ms');
+    beats.forEach(([t,rr])=>L.push((t-t0).toFixed(2)+','+rr));
+    return L.join('\n');
   }
   $('copy').onclick=async()=>{
-    try{ await navigator.clipboard.writeText(timelineEl.textContent); $('copy').textContent='Copied'; }
-    catch(e){ $('copy').textContent='Select the text above to copy'; }
-    setTimeout(()=>$('copy').textContent='Copy timeline',2200);
+    try{await navigator.clipboard.writeText(dump.textContent);$('copy').textContent='Copied';}
+    catch(e){$('copy').textContent='Select the text to copy';}
+    setTimeout(()=>$('copy').textContent='Copy all',2200);
+  };
+  $('dl').onclick=()=>{
+    try{
+      const b=new Blob([dump.textContent],{type:'text/plain'}),u=URL.createObjectURL(b),a=document.createElement('a');
+      a.href=u;a.download='coherence-'+new Date(wall0).toISOString().slice(0,16).replace(/[:T]/g,'')+'.txt';
+      a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);
+    }catch(e){$('dl').textContent='Use copy instead';}
   };
 
-  // ---------- misc ----------
-  function fmt(sec){
-    sec=Math.max(0,Math.ceil(sec));
-    return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
-  }
-  async function wake(){ try{ if('wakeLock' in navigator) lock=await navigator.wakeLock.request('screen'); }catch(e){} }
-  function onVis(){ if(document.visibilityState==='visible'){ if(!lock) wake(); schedule(); } }
+  const fmt=s=>{s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
+  async function wake(){try{if('wakeLock' in navigator)lock=await navigator.wakeLock.request('screen');}catch(e){}}
+  function onVis(){if(document.visibilityState==='visible'){if(!lock)wake();schedule();}}
 
   function idle(){
-    const p=makePlan(), t=p[p.length-1].end;
-    clock.textContent=fmt(t);
-    cue.textContent='Ready';
-    bar.style.width='0%';
-    if(mode==='session'){
-      const n=p.find(s=>s.kind==='breathe').cycles;
-      breaths.textContent=n+' breaths at '+rate.toFixed(1)+' per minute';
-    }else{
-      breaths.textContent='5 rates, hands free';
+    const p=makePlan(),t=p[p.length-1].end;
+    clock.textContent=fmt(t);cue.textContent='Ready';bar.style.width='0%';
+    if(mode==='assess'){
+      breaths.textContent=GRIDS[grid].length+' rates, hands free';
       $('est').textContent='About '+Math.round(t/60)+' minutes end to end.';
+    }else if(mode==='check'){
+      breaths.textContent='2 minutes at 5.5';
+    }else{
+      breaths.textContent=p.find(s=>s.kind==='breathe').cycles+' breaths at '+rate.toFixed(1)+' per minute';
     }
   }
 
-  go.onclick=()=>{ running?abort():begin(); };
+  go.onclick=()=>{running?abort():begin();};
   again.onclick=()=>reset();
   document.addEventListener('keydown',e=>{
-    if(e.code==='Space'){ e.preventDefault(); (go.classList.contains('hidden')?again:go).click(); }
-  });
-
+    if(e.code==='Space'){e.preventDefault();(go.classList.contains('hidden')?again:go).click();}});
   setMode();
 })();
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
-}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
 </script>
 </body>
 </html>
