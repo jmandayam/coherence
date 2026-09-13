@@ -1,4 +1,4 @@
-const CACHE = 'coherence-v4';
+const CACHE = 'coherence-v5';
 const SHELL = [
   './',
   './index.html',

@@ -43,6 +43,20 @@
     padding:18px 18px calc(28px + env(safe-area-inset-bottom))}
   main{width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center;gap:18px}
   .modes{display:flex;gap:7px}
+  .menu{align-self:flex-start;position:relative}
+  .modebtn{font:inherit;font-size:15px;font-weight:400;display:inline-flex;align-items:center;gap:8px;
+           padding:6px 2px;background:none;border:none;color:var(--text);cursor:pointer}
+  .modebtn .chev{width:10px;height:6px;fill:none;stroke:currentColor;stroke-width:1.4;transition:transform .15s}
+  .modebtn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+  .pop{position:absolute;top:calc(100% + 6px);left:0;z-index:10;min-width:200px;display:flex;
+       flex-direction:column;padding:5px;background:var(--surface);border:1px solid var(--hair);
+       border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14)}
+  .pop button{font:inherit;font-size:14px;display:flex;justify-content:space-between;gap:16px;text-align:left;
+              padding:9px 11px;border:none;border-radius:8px;background:none;color:var(--text);cursor:pointer}
+  .pop button:hover,.pop button:focus-visible{background:var(--bg)}
+  .pop button[aria-checked="true"]::after{content:"✓";color:var(--inhale)}
+  .readout{min-width:5ch;text-align:right;font-size:13px;color:var(--text);font-variant-numeric:tabular-nums}
+  .field > p.sub{font-size:11.5px}
   .strap{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted);
          width:100%;justify-content:center;min-height:20px;text-align:center}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--hair);flex:none}
@@ -114,10 +128,16 @@
 </head>
 <body>
 <main>
-  <div class="modes" id="modes">
-    <button class="chip" type="button" data-mode="session">Session</button>
-    <button class="chip" type="button" data-mode="assess">Find my pace</button>
-    <button class="chip" type="button" data-mode="check">Strap check</button>
+  <div class="menu" id="modes">
+    <button class="modebtn" id="modebtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="modemenu">
+      <span id="modename">Session</span><svg class="chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg>
+    </button>
+    <div class="pop hidden" id="modemenu" role="menu" aria-label="Mode">
+      <button type="button" role="menuitemradio" data-mode="session">Session</button>
+      <button type="button" role="menuitemradio" data-mode="assess">Find my pace</button>
+      <button type="button" role="menuitemradio" data-mode="check">Strap check</button>
+      <button type="button" role="menuitemradio" data-mode="daily">Daily HRV</button>
+    </div>
   </div>
 
   <div class="strap" id="strapbar">
@@ -143,8 +163,11 @@
 
   <div class="controls" id="controls">
     <div class="controls" id="setupSession">
-      <div class="field"><p>Session length</p><div class="chips" id="durations"></div></div>
-      <div class="field"><p>Pace, breaths per minute</p><div class="chips" id="rates"></div></div>
+      <div class="field"><p>Session length</p>
+        <div class="row"><input id="minutes" type="range" min="2" max="30" step="1" aria-label="Session length, minutes">
+          <output class="readout" id="minutesOut" for="minutes"></output></div></div>
+      <div class="field"><p>Pace, seconds in/out</p><div class="chips" id="rates"></div>
+        <p class="sub" id="ratesBpm"></p></div>
     </div>
 
     <div class="controls hidden" id="setupAssess">
@@ -163,7 +186,7 @@
     </div>
 
     <div class="controls hidden" id="setupCheck">
-      <p class="est">Two minutes at 5.5 to confirm the strap is giving clean beats.</p>
+      <p class="est">Two minutes at 5.45 s in/out to confirm the strap is giving clean beats.</p>
     </div>
 
     <div class="row"><label for="vol">Volume</label><input id="vol" type="range" min="0" max="100" value="60"></div>
@@ -175,7 +198,7 @@
     </div>
 
     <button class="go" id="go">Begin</button>
-    <button class="quiet hidden" id="again">Start again</button>
+    <button class="go hidden" id="again">Start again</button>
   </div>
 
   <div class="panel hidden" id="results">
@@ -203,7 +226,7 @@
         note=$('note'),volEl=$('vol'),speakEl=$('speak'),dot=$('dot'),strapmsg=$('strapmsg');
 
   const DURATIONS=[3,5,10,15,20,30];
-  const RATES=[4.5,5,5.5,6];
+  const RATES=[5,5.25,5.5,5.75,6].map(s=>60/(2*s));
   const GRIDS={coarse:[6.5,6,5.5,5,4.5], fine:[6,5.5,5.25,5,4.75,4.5]};
   const LEADIN=10, ANNOUNCE=12, SETTINGS='coherence.settings';
 
@@ -211,6 +234,7 @@
   let grid='fine', stepMin=2, restSec=90, baseMin=2, order='desc';
   let customSec=null, repeats=2, passOrder='palindrome';
   let volume=.6, speech=true;
+  let unsaved=false;
 
   // Custom rates are typed in seconds in/out (one inhale, or one exhale). Everything
   // internal stays in breaths per minute: bpm = 60 / (2 × seconds).
@@ -253,8 +277,14 @@
       host.appendChild(b);
     });
   }
-  chips($('durations'),DURATIONS,v=>v+' min',()=>minutes,v=>minutes=v);
-  chips($('rates'),RATES,v=>v.toFixed(1),()=>rate,v=>rate=v);
+  const minutesEl=$('minutes'),minutesOut=$('minutesOut');
+  minutes=Math.min(30,Math.max(2,Math.round(+minutes)||10));
+  minutesEl.value=minutes;minutesOut.textContent=minutes+' min';
+  minutesEl.oninput=()=>{minutes=+minutesEl.value;minutesOut.textContent=minutes+' min';save();idle();};
+  // Paces are offered in seconds in/out. A rate saved from the old bpm chips snaps to the nearest one.
+  rate=RATES.reduce((a,b)=>Math.abs(secOf(b)-secOf(rate))<Math.abs(secOf(a)-secOf(rate))?b:a);
+  chips($('rates'),RATES,v=>fmtSec(secOf(v)),()=>rate,v=>rate=v);
+  $('ratesBpm').textContent=RATES.map(r=>r.toFixed(2)).join(' · ')+' breaths per minute';
   const gridChips=()=>chips($('grid'),['coarse','fine'],v=>v==='coarse'?'6.5 to 4.5':'6.0 to 4.5, fine',()=>grid,v=>grid=v);
   gridChips();
   chips($('steplen'),[2,3,4],v=>v+' min',()=>stepMin,v=>stepMin=v);
@@ -291,9 +321,34 @@
   speakEl.checked=speech;
   speakEl.onchange=()=>{speech=speakEl.checked;save();};
 
-  [...$('modes').children].forEach(b=>b.onclick=()=>{mode=b.dataset.mode;setMode();});
+  const MODES={session:'Session',assess:'Find my pace',check:'Strap check',daily:'Daily HRV'};
+  const modebtn=$('modebtn'),modemenu=$('modemenu'),items=[...modemenu.children];
+  const menuOpen=()=>!modemenu.classList.contains('hidden');
+  function menu(open){
+    modemenu.classList.toggle('hidden',!open);
+    modebtn.setAttribute('aria-expanded',String(open));
+    if(open)(items.find(b=>b.dataset.mode===mode)||items[0]).focus();
+  }
+  modebtn.onclick=()=>menu(!menuOpen());
+  items.forEach((b,i)=>{
+    b.onclick=()=>{menu(false);modebtn.focus();if(!discardOK())return;mode=b.dataset.mode;setMode();};
+    b.onkeydown=e=>{
+      if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;
+      e.preventDefault();items[(i+(e.key==='ArrowDown'?1:items.length-1))%items.length].focus();
+    };
+  });
+  document.addEventListener('click',e=>{if(menuOpen()&&!$('modes').contains(e.target))menu(false);});
+
+  // The export exists only on screen. Leaving results that were never copied or downloaded
+  // throws the recording away, so ask first.
+  const discardOK=()=>!unsaved||confirm('The beat data from this session hasn’t been copied or downloaded. Discard it?');
+
   function setMode(){
-    [...$('modes').children].forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
+    restore();
+    $('modename').textContent=MODES[mode];
+    items.forEach(b=>b.setAttribute('aria-checked',String(b.dataset.mode===mode)));
+    // Daily HRV has no screen yet.
+    [stage,bar.parentNode,controls,note].forEach(e=>e.classList.toggle('hidden',mode==='daily'));
     $('setupSession').classList.toggle('hidden',mode!=='session');
     $('setupAssess').classList.toggle('hidden',mode!=='assess');
     $('setupCheck').classList.toggle('hidden',mode!=='check');
@@ -572,7 +627,8 @@
     note.textContent = beats.length
       ? 'Copy the block below and hand it over for analysis.'
       : 'Sit for a moment before you get up.';
-    if(mode!=='session'||beats.length){dump.textContent=exportText();panel.classList.remove('hidden');}
+    $('modes').classList.remove('hidden');
+    if(mode!=='session'||beats.length){dump.textContent=exportText();panel.classList.remove('hidden');unsaved=beats.length>0;}
     if(beats.length&&mode!=='session')showResults();
     setTimeout(()=>{if(ctx&&!running){ctx.close().catch(()=>{});ctx=null;master=null;}},4000);
   }
@@ -585,15 +641,19 @@
     reset();
   }
   function reset(){
+    restore();
+    setMode();
+  }
+  // Undo what begin() and complete() hid or showed, so every mode lands on a usable screen.
+  function restore(){
     controls.querySelectorAll('.field,.row,.hint').forEach(e=>e.classList.remove('hidden'));
     $('modes').classList.remove('hidden');
-    panel.classList.add('hidden');results.classList.add('hidden');
+    panel.classList.add('hidden');results.classList.add('hidden');unsaved=false;
     again.classList.add('hidden');go.classList.remove('hidden');
     breath.setAttribute('r',30);marker.classList.remove('off');
     marker.setAttribute('cx',100);marker.setAttribute('cy',10);
     stage.removeAttribute('data-phase');
     note.textContent='Inhale on the rising tone, exhale on the low one. Breathe through your nose, into your belly, without straining.';
-    setMode();
   }
 
   function fit(pts,f){
@@ -669,7 +729,7 @@
     return L.join('\n');
   }
   $('copy').onclick=async()=>{
-    try{await navigator.clipboard.writeText(dump.textContent);$('copy').textContent='Copied';}
+    try{await navigator.clipboard.writeText(dump.textContent);$('copy').textContent='Copied';unsaved=false;}
     catch(e){$('copy').textContent='Select the text to copy';}
     setTimeout(()=>$('copy').textContent='Copy all',2200);
   };
@@ -677,7 +737,7 @@
     try{
       const b=new Blob([dump.textContent],{type:'text/plain'}),u=URL.createObjectURL(b),a=document.createElement('a');
       a.href=u;a.download='coherence-'+new Date(wall0).toISOString().slice(0,16).replace(/[:T]/g,'')+'.txt';
-      a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);
+      a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);unsaved=false;
     }catch(e){$('dl').textContent='Use copy instead';}
   };
 
@@ -686,22 +746,25 @@
   function onVis(){if(document.visibilityState==='visible'){if(!lock)wake();schedule();}}
 
   function idle(){
+    if(mode==='daily')return;
     const p=makePlan(),t=p[p.length-1].end;
-    clock.textContent=fmt(t);cue.textContent='Ready';bar.style.width='0%';
+    clock.textContent=fmt(mode==='session'?minutes*60:t);cue.textContent='Ready';bar.style.width='0%';
     if(mode==='assess'){
       customShow();
       breaths.textContent=rateList().length+' rates'+(repeats>1?' × '+repeats+' passes':'')+', hands free';
       $('est').textContent='About '+Math.round(t/60)+' minutes end to end.';
     }else if(mode==='check'){
-      breaths.textContent='2 minutes at 5.5';
+      breaths.textContent='2 minutes at '+fmtSec(secOf(5.5))+' s in/out';
     }else{
-      breaths.textContent=p.find(s=>s.kind==='breathe').cycles+' breaths at '+rate.toFixed(1)+' per minute';
+      breaths.textContent=p.find(s=>s.kind==='breathe').cycles+' breaths at '+fmtSec(secOf(rate))+' s in/out';
     }
   }
 
   go.onclick=()=>{running?abort():begin();};
-  again.onclick=()=>reset();
+  again.onclick=()=>{if(discardOK())reset();};
   document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&menuOpen()){menu(false);modebtn.focus();return;}
+    if(mode==='daily'||menuOpen()||$('modes').contains(e.target))return;
     if(e.code==='Space'){e.preventDefault();(go.classList.contains('hidden')?again:go).click();}});
   setMode();
 })();
