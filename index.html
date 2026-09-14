@@ -57,6 +57,17 @@
   .pop button[aria-checked="true"]::after{content:"✓";color:var(--inhale)}
   .readout{min-width:5ch;text-align:right;font-size:13px;color:var(--text);font-variant-numeric:tabular-nums}
   .field > p.sub{font-size:11.5px}
+  .summary{width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center;gap:14px;
+           padding:22px 16px 18px;background:var(--surface);border:1px solid var(--hair);border-radius:14px}
+  .summary h2{margin:0;font-family:"Newsreader",Georgia,serif;font-weight:300;font-size:26px}
+  .stats{width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+  .stats > div{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .stats .num{font-family:"Newsreader",Georgia,serif;font-weight:300;font-size:32px;line-height:1.05;
+              font-variant-numeric:tabular-nums}
+  .stats .num small{font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;font-size:11px;color:var(--muted);margin-left:3px}
+  .stats .lab{font-size:12px;color:var(--muted)}
+  .stats .delta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;min-height:1em}
+  .summary .cap{margin:0;font-size:11.5px;color:var(--muted)}
   .strap{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted);
          width:100%;justify-content:center;min-height:20px;text-align:center}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--hair);flex:none}
@@ -158,6 +169,16 @@
     </div>
   </div>
 
+  <div class="summary hidden" id="summary">
+    <h2>Done</h2>
+    <div class="stats">
+      <div><span class="num"><span id="sHr"></span><small>bpm</small></span><span class="lab">mean HR</span><span class="delta" id="dHr"></span></div>
+      <div><span class="num"><span id="sSwing"></span><small>bpm</small></span><span class="lab">swing</span><span class="delta" id="dSwing"></span></div>
+      <div><span class="num"><span id="sRmssd"></span><small>ms</small></span><span class="lab">rMSSD</span><span class="delta" id="dRmssd"></span></div>
+    </div>
+    <p class="cap" id="sCap">change since your last session</p>
+  </div>
+
   <div class="progress"><span id="bar"></span></div>
   <div class="steptrack hidden" id="steptrack"></div>
 
@@ -228,7 +249,7 @@
   const DURATIONS=[3,5,10,15,20,30];
   const RATES=[5,5.25,5.5,5.75,6].map(s=>60/(2*s));
   const GRIDS={coarse:[6.5,6,5.5,5,4.5], fine:[6,5.5,5.25,5,4.75,4.5]};
-  const LEADIN=10, ANNOUNCE=12, SETTINGS='coherence.settings';
+  const LEADIN=10, ANNOUNCE=12, SETTINGS='coherence.settings', HISTORY='coherence.history';
 
   let mode='session', minutes=10, rate=5.5;
   let grid='fine', stepMin=2, restSec=90, baseMin=2, order='desc';
@@ -630,6 +651,8 @@
     $('modes').classList.remove('hidden');
     if(mode!=='session'||beats.length){dump.textContent=exportText();panel.classList.remove('hidden');unsaved=beats.length>0;}
     if(beats.length&&mode!=='session')showResults();
+    const sum=(mode==='session'||mode==='check')&&beats.length?summarise():null;
+    if(sum)showSummary(sum);
     setTimeout(()=>{if(ctx&&!running){ctx.close().catch(()=>{});ctx=null;master=null;}},4000);
   }
   function abort(){
@@ -649,6 +672,7 @@
     controls.querySelectorAll('.field,.row,.hint').forEach(e=>e.classList.remove('hidden'));
     $('modes').classList.remove('hidden');
     panel.classList.add('hidden');results.classList.add('hidden');unsaved=false;
+    $('summary').classList.add('hidden');
     again.classList.add('hidden');go.classList.remove('hidden');
     breath.setAttribute('r',30);marker.classList.remove('off');
     marker.setAttribute('cx',100);marker.setAttribute('cy',10);
@@ -673,6 +697,39 @@
     const c=[0,0,0,0];
     for(let i=3;i>=0;i--){let s=b[i];for(let j=i+1;j<4;j++)s-=A[i][j]*c[j];c[i]=s/A[i][i];}
     return 2*Math.hypot(c[2],c[3]);
+  }
+  // Mean HR, swing and rMSSD over the paced block with its first 30 s dropped. Values are
+  // stored rounded as displayed, so a delta is exactly the difference of the two numbers shown.
+  function summarise(){
+    const s=plan.find(x=>x.kind==='breathe'),a=s.start+30;
+    const w=beats.filter(([t])=>t-t0>=a&&t-t0<s.end);
+    if(w.length<12)return null;
+    const rr=w.map(b=>b[1]);
+    let sq=0;for(let i=1;i<rr.length;i++)sq+=(rr[i]-rr[i-1])**2;
+    const amp=fit(w.map(([t,r])=>[t-t0-a,60000/r]),s.rate/60);
+    return {t:wall0,mode,pace:+secOf(s.rate).toFixed(2),minutes:mode==='check'?2:minutes,
+      hr:Math.round(60000*rr.length/rr.reduce((x,y)=>x+y,0)),
+      swing:amp==null?null:+amp.toFixed(1),
+      rmssd:Math.round(Math.sqrt(sq/(rr.length-1)))};
+  }
+  // Deltas are against the last session of the same mode at the same pace, since swing and
+  // rMSSD both move with breathing rate. Muted and signed only: no colour, no verdict.
+  function showSummary(e){
+    let h=[];
+    try{h=JSON.parse(localStorage.getItem(HISTORY)||'[]');if(!Array.isArray(h))h=[];}catch(err){}
+    const prev=[...h].reverse().find(x=>x.mode===e.mode&&x.pace===e.pace);
+    h.push(e);
+    try{localStorage.setItem(HISTORY,JSON.stringify(h.slice(-60)));}catch(err){}
+    const delta=(k,dp)=>{
+      if(!prev||e[k]==null||prev[k]==null)return '';
+      const v=+(e[k]-prev[k]).toFixed(dp);
+      return (v>0?'+':v<0?'−':'±')+Math.abs(v).toFixed(dp);
+    };
+    $('sHr').textContent=e.hr;$('dHr').textContent=delta('hr',0);
+    $('sSwing').textContent=e.swing==null?'—':e.swing.toFixed(1);$('dSwing').textContent=delta('swing',1);
+    $('sRmssd').textContent=e.rmssd;$('dRmssd').textContent=delta('rmssd',0);
+    $('sCap').classList.toggle('hidden',!prev);
+    stage.classList.add('hidden');$('summary').classList.remove('hidden');
   }
   function showResults(){
     const rows=[];
