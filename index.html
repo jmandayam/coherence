@@ -133,6 +133,33 @@
   th:first-child,td:first-child{text-align:left}
   th{font-weight:400;color:var(--muted)}
   :focus-visible{outline:2px solid var(--inhale);outline-offset:3px;border-radius:4px}
+  .daily{width:100%;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .daily .est{max-width:34ch;line-height:1.6}
+  .dtoday{display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:8px}
+  .dtoday .when{margin:0;font-size:12.5px;color:var(--muted)}
+  .dtoday .big{font-family:"Newsreader",Georgia,serif;font-weight:200;font-size:64px;line-height:1;
+               font-variant-numeric:tabular-nums}
+  .dtoday .big small{font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;font-size:13px;
+                     color:var(--muted);margin-left:6px}
+  .dtoday .verdict{margin:0;font-size:13px;color:var(--muted);text-align:center}
+  .dmeasure{display:flex;flex-direction:column;align-items:center;gap:6px;padding:28px 0 8px}
+  .dmsg{width:100%;margin:0;padding:12px 14px;border:1px solid var(--warn);border-radius:12px;
+        font-size:13px;line-height:1.6;color:var(--text)}
+  .go.off{opacity:.4;cursor:default}
+  .go.off:hover{background:transparent;color:var(--text)}
+  .dcharts{width:100%;display:flex;flex-direction:column;gap:22px;padding-top:6px}
+  .chart{display:flex;flex-direction:column;gap:6px}
+  .chart h3{margin:0;font-size:12.5px;font-weight:400;color:var(--text)}
+  .chart p{margin:0;font-size:11.5px;color:var(--muted);line-height:1.5}
+  .chart svg{height:auto;font-variant-numeric:tabular-nums}
+  .chart .band{fill:var(--inhale);fill-opacity:.13}
+  .chart .grid{stroke:var(--hair);stroke-width:1}
+  .chart .ylab,.chart .xlab{font-size:10px;fill:var(--muted)}
+  .chart .ylab{text-anchor:end}
+  .chart .xlab{text-anchor:middle}
+  .chart .line{fill:none;stroke:var(--text);stroke-width:1.3;stroke-opacity:.55}
+  .chart .pt{fill:var(--text)}
+  .chart .pt.now{fill:var(--inhale)}
   .hidden{display:none !important}
   footer{font-size:12px;color:var(--muted);text-align:center;line-height:1.6;max-width:36ch}
 </style>
@@ -155,6 +182,29 @@
     <span class="dot" id="dot"></span><span id="strapmsg">Strap not connected</span>
     <button class="quiet" id="connect" style="padding:2px 6px">Connect</button>
   </div>
+
+  <section class="daily hidden" id="daily">
+    <div class="dtoday hidden" id="dToday">
+      <p class="when" id="dWhen"></p>
+      <div class="big"><span id="dVal"></span><small>ms rMSSD</small></div>
+      <p class="verdict" id="dVerdict"></p>
+    </div>
+    <div class="dmeasure hidden" id="dMeasure">
+      <div class="clock" id="dClock">2:00</div>
+      <div class="breaths" id="dPhase"></div>
+    </div>
+    <p class="dmsg hidden" id="dMsg" role="alert"></p>
+    <button class="go" id="dGo" type="button">Measure now</button>
+    <button class="quiet hidden" id="dCancel" type="button">Cancel</button>
+    <p class="est" id="dNeed">Connect the strap to take a reading.</p>
+    <p class="est" id="dProtocol">Two minutes, seated, breathing normally. Same time each day, before coffee.</p>
+    <div class="dcharts hidden" id="dCharts">
+      <div class="chart"><h3>Last 7 days</h3><svg id="dWeek" role="img"></svg><p id="dWeekCap"></p></div>
+      <div class="chart"><h3>Last 4 weeks</h3><svg id="dMonth" role="img"></svg>
+        <p id="dMonthCap">Weekly average rMSSD in milliseconds, labelled by the day each week starts.</p></div>
+      <button class="quiet" id="dCopy" type="button" style="align-self:flex-start;padding:4px 0">Copy data</button>
+    </div>
+  </section>
 
   <div class="stage" id="stage">
     <svg viewBox="0 0 200 200" aria-hidden="true">
@@ -255,7 +305,7 @@
   let grid='fine', stepMin=2, restSec=90, baseMin=2, order='desc';
   let customSec=null, repeats=2, passOrder='palindrome';
   let volume=.6, speech=true;
-  let unsaved=false;
+  let unsaved=false, measuring=false;
 
   // Custom rates are typed in seconds in/out (one inhale, or one exhale). Everything
   // internal stays in breaths per minute: bpm = 60 / (2 × seconds).
@@ -368,8 +418,9 @@
     restore();
     $('modename').textContent=MODES[mode];
     items.forEach(b=>b.setAttribute('aria-checked',String(b.dataset.mode===mode)));
-    // Daily HRV has no screen yet.
     [stage,bar.parentNode,controls,note].forEach(e=>e.classList.toggle('hidden',mode==='daily'));
+    $('daily').classList.toggle('hidden',mode!=='daily');
+    if(mode==='daily'){dMsg.classList.add('hidden');dGo.textContent='Measure now';drawDaily();}
     $('setupSession').classList.toggle('hidden',mode!=='session');
     $('setupAssess').classList.toggle('hidden',mode!=='assess');
     $('setupCheck').classList.toggle('hidden',mode!=='check');
@@ -653,7 +704,7 @@
     if(beats.length&&mode!=='session')showResults();
     const sum=(mode==='session'||mode==='check')&&beats.length?summarise():null;
     if(sum)showSummary(sum);
-    setTimeout(()=>{if(ctx&&!running){ctx.close().catch(()=>{});ctx=null;master=null;}},4000);
+    setTimeout(()=>{if(ctx&&!running&&!measuring){ctx.close().catch(()=>{});ctx=null;master=null;}},4000);
   }
   function abort(){
     running=false;clearInterval(timer);cancelAnimationFrame(raf);
@@ -816,6 +867,166 @@
       breaths.textContent=p.find(s=>s.kind==='breathe').cycles+' breaths at '+fmtSec(secOf(rate))+' s in/out';
     }
   }
+
+  // ---------- daily HRV ----------
+  // A morning resting reading: two minutes unpaced, first 30 s dropped, rMSSD over the rest.
+  // Kept apart from practice sessions in its own key; nothing here reads coherence.history.
+  const DAILY='coherence.daily', MEASURE=120, DISCARD=30, MIN_BEATS=60;
+  const dGo=$('dGo'),dMsg=$('dMsg');
+  let mT0=0,mWall=0,mTimer=null;
+  const p2=n=>String(n).padStart(2,'0');
+  const dayKey=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+  const addDays=(key,n)=>{const [y,m,d]=key.split('-').map(Number);return dayKey(new Date(y,m-1,d+n));};
+  const md=key=>{const [,m,d]=key.split('-').map(Number);return m+'/'+d;};
+  const connected=()=>!!(dev&&dev.gatt.connected);
+  function loadDaily(){
+    try{const d=JSON.parse(localStorage.getItem(DAILY)||'[]');
+      return Array.isArray(d)?d.filter(r=>r&&/^\d{4}-\d\d-\d\d$/.test(r.date)&&isFinite(r.rmssd))
+        .sort((a,b)=>a.date<b.date?-1:1):[];}
+    catch(e){return [];}
+  }
+
+  function strapState(){
+    const c=connected();
+    dGo.classList.toggle('off',!c);dGo.setAttribute('aria-disabled',String(!c));
+    $('dNeed').classList.toggle('hidden',c||measuring);
+  }
+  // The connect handler isn't ours to touch, so watch the link from here.
+  setInterval(()=>{if(mode==='daily'&&!measuring)strapState();},1000);
+
+  dGo.onclick=()=>{
+    if(measuring||!connected())return;
+    if(loadDaily().some(r=>r.date===dayKey(new Date()))&&
+       !confirm('There is already a reading for today. Take a new one and replace it?'))return;
+    audio();
+    beats=[];beatClock=null;bad=0;seen=0;
+    mT0=ctx.currentTime;mWall=Date.now();measuring=true;
+    prepTone(ctx.currentTime+.05);
+    $('modes').classList.add('hidden');
+    [dGo,dMsg,$('dToday'),$('dCharts'),$('dNeed')].forEach(e=>e.classList.add('hidden'));
+    $('dMeasure').classList.remove('hidden');$('dCancel').classList.remove('hidden');
+    document.addEventListener('visibilitychange',onVis);wake();
+    measureTick();mTimer=setInterval(measureTick,250);
+  };
+  $('dCancel').onclick=()=>endMeasure(null);
+
+  function measureTick(){
+    const el=ctx.currentTime-mT0;
+    if(el>=MEASURE)return endMeasure(measureResult());
+    $('dClock').textContent=fmt(MEASURE-el);
+    $('dPhase').textContent=el<DISCARD?'Settling. The first 30 seconds aren’t counted.':'Recording. Breathe normally.';
+  }
+  // Same flag rule as the live counter: out of range, or more than 25% off the beat before.
+  function measureResult(){
+    const w=[];
+    beats.forEach(([t,rr],i)=>{const x=t-mT0;if(x>=DISCARD&&x<MEASURE)w.push([rr,i?beats[i-1][1]:rr]);});
+    if(w.length<MIN_BEATS)return {err:'Only '+w.length+' beats came through in the 90 seconds counted. '+
+      'Check the strap is damp and snug, then try again. Nothing was saved.'};
+    const flagged=100*w.filter(([rr,p])=>rr<300||rr>2000||Math.abs(rr-p)>0.25*p).length/w.length;
+    if(flagged>5)return {err:flagged.toFixed(1)+'% of beats were flagged, above the 5% limit. '+
+      'That is usually strap contact or movement. Sit still and try again. Nothing was saved.'};
+    let sq=0;for(let i=1;i<w.length;i++)sq+=(w[i][0]-w[i-1][0])**2;
+    return {date:dayKey(new Date(mWall)),t:mWall,
+      rmssd:+Math.sqrt(sq/(w.length-1)).toFixed(1),
+      hr:Math.round(60000*w.length/w.reduce((s,x)=>s+x[0],0)),
+      flagged:+flagged.toFixed(1)};
+  }
+  function endMeasure(r){
+    clearInterval(mTimer);measuring=false;
+    document.removeEventListener('visibilitychange',onVis);
+    if(lock){lock.release().catch(()=>{});lock=null;}
+    if(r&&ctx)finishChime(ctx.currentTime+.15);
+    setTimeout(()=>{if(ctx&&!running&&!measuring){ctx.close().catch(()=>{});ctx=null;master=null;}},4000);
+    $('modes').classList.remove('hidden');
+    $('dMeasure').classList.add('hidden');$('dCancel').classList.add('hidden');dGo.classList.remove('hidden');
+    if(r&&r.err){dMsg.textContent=r.err;dMsg.classList.remove('hidden');dGo.textContent='Try again';}
+    else{
+      dGo.textContent='Measure now';
+      if(r){try{localStorage.setItem(DAILY,JSON.stringify(loadDaily().filter(x=>x.date!==r.date).concat(r)));}catch(e){}}
+    }
+    drawDaily();
+  }
+
+  function drawDaily(){
+    strapState();
+    if(measuring)return;
+    const all=loadDaily(),today=dayKey(new Date()),has=all.length>0;
+    $('dToday').classList.toggle('hidden',!has);$('dCharts').classList.toggle('hidden',!has);
+    if(!has)return;
+    const last=all[all.length-1],v=Math.round(last.rmssd);
+    $('dWhen').textContent=last.date===today?'Today':'Last reading, '+md(last.date);
+    $('dVal').textContent=v;
+
+    // Normal range: mean ± 1 SD of the last 28 days, only once there are 10 readings to stand on.
+    const recent=all.filter(r=>r.date>=addDays(today,-27)).map(r=>r.rmssd);
+    let band=null;
+    if(recent.length>=10){
+      const m=recent.reduce((s,x)=>s+x,0)/recent.length;
+      const sd=Math.sqrt(recent.reduce((s,x)=>s+(x-m)**2,0)/(recent.length-1));
+      band={lo:m-sd,hi:m+sd};
+    }
+    $('dVerdict').textContent = band
+      ? (v<band.lo?'Below':v>band.hi?'Above':'Within')+' your normal range, '+
+        Math.round(band.lo)+'–'+Math.round(band.hi)+' ms'
+      : 'Baseline still building: '+recent.length+' of 10 readings in the last 28 days.';
+
+    const days=[...Array(7)].map((_,i)=>addDays(today,i-6));
+    const dayVals=days.map(d=>{const r=all.find(x=>x.date===d);return r?r.rmssd:null;});
+    const okWeek=chart($('dWeek'),{labels:days.map(md),vals:dayVals,band,grid:3,big:6,
+      label:'Daily rMSSD, last 7 days'});
+    $('dWeek').classList.toggle('hidden',!okWeek);
+    $('dWeekCap').textContent=(okWeek?'rMSSD in milliseconds, one reading a day.':'No readings in the last 7 days.')+
+      (band&&okWeek?' Shaded band: your normal range, mean ± 1 SD over the last 28 days.':'');
+
+    const starts=[...Array(4)].map((_,i)=>addDays(today,-27+7*i));
+    const weekVals=starts.map(s=>{const e=addDays(s,6),g=all.filter(r=>r.date>=s&&r.date<=e);
+      return g.length?g.reduce((t,r)=>t+r.rmssd,0)/g.length:null;});
+    const okMonth=chart($('dMonth'),{labels:starts.map(md),vals:weekVals,band:null,grid:2,big:-1,
+      label:'Weekly average rMSSD, last 4 weeks'});
+    $('dMonth').classList.toggle('hidden',!okMonth);
+    $('dMonthCap').textContent=okMonth?'Weekly average rMSSD in milliseconds, labelled by the day each week starts.'
+      :'No readings in the last 4 weeks.';
+  }
+
+  // Gridline values: n evenly spaced whole numbers on a round step that cover lo..hi.
+  function ticks(lo,hi,n){
+    if(hi-lo<4){const m=(lo+hi)/2;lo=m-2;hi=m+2;}
+    for(const step of [1,2,5,10,20,25,50,100,200,500,1000]){
+      const a=Math.max(0,Math.floor(lo/step)*step);
+      if(a+step*(n-1)>=hi)return [...Array(n)].map((_,i)=>a+i*step);
+    }
+    const step=Math.ceil((hi-lo)/(n-1));return [...Array(n)].map((_,i)=>Math.floor(lo)+i*step);
+  }
+  // One slot per label; missing values leave a gap in the points and the line joins what exists.
+  function chart(svg,{labels,vals,band,grid,big,label}){
+    const nums=vals.filter(x=>x!=null);
+    if(!nums.length){svg.innerHTML='';return false;}
+    const W=320,H=grid===3?150:118,L=30,R=6,T=10,B=22;
+    let lo=Math.min(...nums),hi=Math.max(...nums);
+    if(band){lo=Math.min(lo,band.lo);hi=Math.max(hi,band.hi);}
+    const g=ticks(lo,hi,grid),y0=g[0],y1=g[g.length-1];
+    const X=i=>L+(W-L-R)*(i+.5)/labels.length, Y=y=>T+(H-T-B)*(1-(y-y0)/(y1-y0)), f=x=>x.toFixed(1);
+    let s='';
+    if(band)s+='<rect class="band" x="'+L+'" y="'+f(Y(band.hi))+'" width="'+(W-L-R)+'" height="'+f(Y(band.lo)-Y(band.hi))+'"/>';
+    g.forEach(y=>{s+='<line class="grid" x1="'+L+'" x2="'+(W-R)+'" y1="'+f(Y(y))+'" y2="'+f(Y(y))+'"/>'+
+      '<text class="ylab" x="'+(L-6)+'" y="'+f(Y(y)+3.5)+'">'+y+'</text>';});
+    labels.forEach((t,i)=>{s+='<text class="xlab" x="'+f(X(i))+'" y="'+(H-6)+'">'+t+'</text>';});
+    const pts=vals.map((y,i)=>y==null?null:f(X(i))+','+f(Y(y))).filter(Boolean);
+    if(pts.length>1)s+='<polyline class="line" points="'+pts.join(' ')+'"/>';
+    vals.forEach((y,i)=>{if(y!=null)s+='<circle class="pt'+(i===big?' now':'')+'" cx="'+f(X(i))+'" cy="'+f(Y(y))+
+      '" r="'+(i===big?4.5:2.6)+'"/>';});
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    svg.setAttribute('aria-label',label+': '+vals.map((y,i)=>labels[i]+' '+(y==null?'none':Math.round(y)+' ms')).join(', '));
+    svg.innerHTML=s;
+    return true;
+  }
+
+  $('dCopy').onclick=async()=>{
+    const csv=['date,rmssd,mean_hr,flagged_pct',...loadDaily().map(r=>[r.date,r.rmssd,r.hr,r.flagged].join(','))].join('\n');
+    try{await navigator.clipboard.writeText(csv);$('dCopy').textContent='Copied';}
+    catch(e){$('dCopy').textContent='Copy failed';}
+    setTimeout(()=>$('dCopy').textContent='Copy data',2200);
+  };
 
   go.onclick=()=>{running?abort():begin();};
   again.onclick=()=>{if(discardOK())reset();};
